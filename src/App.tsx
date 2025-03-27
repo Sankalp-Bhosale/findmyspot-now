@@ -19,6 +19,8 @@ import FloorSelection from "@/components/FloorSelection";
 import BookingDetails from "@/components/BookingDetails";
 import ConfirmationScreen from "@/components/ConfirmationScreen";
 import NotFound from "./pages/NotFound";
+import BookingsPage from "./pages/BookingsPage";
+import SettingsPage from "./pages/SettingsPage";
 
 const queryClient = new QueryClient();
 
@@ -39,6 +41,8 @@ const App = () => (
               <Route path="/floor-selection" element={<FloorSelection />} />
               <Route path="/booking-details" element={<BookingDetails />} />
               <Route path="/confirmation" element={<ConfirmationScreen />} />
+              <Route path="/bookings" element={<BookingsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
