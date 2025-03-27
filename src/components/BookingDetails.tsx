@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import NavBar from '@/components/ui/NavBar';
-import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { useParking } from '@/context/ParkingContext';
 import { Car, Calendar, Clock, CreditCard, ArrowLeft, ArrowRight } from 'lucide-react';
 

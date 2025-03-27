@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { useParking } from '@/context/ParkingContext';
 import { CheckCircle, Navigation, Car, Calendar, Clock, X } from 'lucide-react';
 

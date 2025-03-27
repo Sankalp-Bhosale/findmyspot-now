@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '@/components/ui/NavBar';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { useParking } from '@/context/ParkingContext';
 import { MapPin, Clock, Car, ChevronRight } from 'lucide-react';
 

@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import NavBar from '@/components/ui/NavBar';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import ParkingSpot from '@/components/ui/ParkingSpot';
 import { useParking } from '@/context/ParkingContext';
 import { ArrowUp, ArrowDown, Loader2 } from 'lucide-react';

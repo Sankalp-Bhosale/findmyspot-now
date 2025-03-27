@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProgressDots from '@/components/ui/ProgressDots';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/Button';
 import { ArrowRight, MapPin, Calendar, Search } from 'lucide-react';
 
 interface OnboardingSlide {
