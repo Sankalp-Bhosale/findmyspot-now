@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -13,8 +14,8 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
+    --primary: 45 100% 51%;  /* Yellow #FFC107 */
+    --primary-foreground: 0 0% 13%; /* Dark text on yellow: #212121 */
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -30,39 +31,23 @@
 
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --ring: 45 100% 51%;  /* Yellow for focus rings */
 
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    --background: 0 0% 13%;  /* Dark background: #212121 */
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 0 0% 13%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 0 0% 13%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 45 100% 51%;  /* Yellow stays the same in dark mode */
+    --primary-foreground: 0 0% 13%;
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -78,15 +63,7 @@
 
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --ring: 45 100% 51%;  /* Yellow for focus rings */
   }
 }
 
@@ -97,5 +74,71 @@
 
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-parking-dark;
+  }
+
+  input, textarea, select {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50;
+  }
+}
+
+@layer components {
+  .parking-container {
+    @apply w-full max-w-md mx-auto px-4 py-6;
+  }
+
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-lg;
+  }
+
+  .button-primary {
+    @apply bg-parking-yellow text-parking-dark py-3 px-6 rounded-full font-medium transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-md;
+  }
+
+  .button-secondary {
+    @apply bg-parking-white text-parking-dark py-3 px-6 rounded-full font-medium border border-parking-lightgray transition-all transform hover:scale-[1.02] active:scale-[0.98] shadow-sm;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3 rounded-lg border border-parking-lightgray bg-white focus:border-parking-yellow;
+  }
+
+  .card-shadow {
+    @apply shadow-[0_8px_30px_rgb(0,0,0,0.07)];
+  }
+
+  .text-gradient {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-parking-yellow to-amber-400;
+  }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Define animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
