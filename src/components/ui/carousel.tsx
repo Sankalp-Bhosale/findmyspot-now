@@ -1,6 +1,8 @@
+
 import * as React from "react"
 import useEmblaCarousel, {
   type UseEmblaCarouselType,
+  type EmblaCarouselType,
 } from "embla-carousel-react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -20,10 +22,9 @@ const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
     const [prevBtnEnabled, setPrevBtnEnabled] = React.useState(false)
     const [nextBtnEnabled, setNextBtnEnabled] = React.useState(false)
 
-    const onSelect = React.useCallback((emblaApi: UseEmblaCarouselType) => {
-      if (!emblaApi) return
-      setPrevBtnEnabled(emblaApi.canScrollPrev())
-      setNextBtnEnabled(emblaApi.canScrollNext())
+    const onSelect = React.useCallback((api: EmblaCarouselType) => {
+      setPrevBtnEnabled(api.canScrollPrev())
+      setNextBtnEnabled(api.canScrollNext())
     }, [])
 
     React.useEffect(() => {

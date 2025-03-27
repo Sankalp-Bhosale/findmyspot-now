@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/Button';
@@ -31,14 +30,11 @@ const ConfirmationScreen: React.FC = () => {
   };
   
   const handleNavigate = () => {
-    // In a real app, this would initiate navigation to the parking location
-    // For demo purposes, we'll just navigate back to the home screen
     navigate('/home');
   };
 
   return (
     <div className="min-h-screen bg-parking-yellow flex flex-col relative">
-      {/* Close button */}
       <button 
         onClick={handleClose}
         className="absolute top-4 right-4 p-2 bg-white/20 backdrop-blur-sm rounded-full"
@@ -47,7 +43,6 @@ const ConfirmationScreen: React.FC = () => {
       </button>
       
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        {/* Success animation */}
         <div className="mb-4 animate-scale-in">
           <CheckCircle size={60} className="text-parking-dark" />
         </div>
@@ -59,9 +54,7 @@ const ConfirmationScreen: React.FC = () => {
           Hooray! You've successfully reserved a parking spot at {selectedLocation.name}.
         </p>
         
-        {/* Booking details card */}
         <div className="w-full max-w-md bg-white rounded-xl overflow-hidden shadow-lg animate-scale-in">
-          {/* Car illustration */}
           <div className="bg-parking-yellow/20 p-4 flex justify-center">
             <div className="relative">
               <svg width="120" height="60" viewBox="0 0 120 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -77,7 +70,6 @@ const ConfirmationScreen: React.FC = () => {
             </div>
           </div>
           
-          {/* Booking details */}
           <div className="p-6">
             <div className="flex justify-between items-start mb-6">
               <div>
@@ -110,10 +102,8 @@ const ConfirmationScreen: React.FC = () => {
               />
             </div>
             
-            {/* QR Code */}
             <div className="mt-8 flex flex-col items-center">
               <div className="bg-parking-lightgray/30 p-4 rounded-lg">
-                {/* Simple QR code placeholder */}
                 <svg width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <rect width="150" height="150" fill="white"/>
                   <rect x="20" y="20" width="30" height="30" fill="black"/>
@@ -149,7 +139,6 @@ const ConfirmationScreen: React.FC = () => {
               </p>
             </div>
             
-            {/* Location details */}
             <div className="mt-6 pt-6 border-t border-parking-lightgray/60">
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-parking-yellow/20 rounded-full flex items-center justify-center">
@@ -165,10 +154,9 @@ const ConfirmationScreen: React.FC = () => {
         </div>
       </div>
       
-      {/* Navigation Button */}
       <div className="p-6">
         <Button
-          variant="primary"
+          variant="default"
           size="lg"
           fullWidth
           onClick={handleNavigate}
@@ -200,7 +188,6 @@ const DetailItem: React.FC<DetailItemProps> = ({ icon, label, value }) => (
   </div>
 );
 
-// Map pin icon component
 const MapPin = ({ size, className }: { size: number, className?: string }) => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 

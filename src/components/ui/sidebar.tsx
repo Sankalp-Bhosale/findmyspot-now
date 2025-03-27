@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { cva } from "class-variance-authority"
 import { ChevronRight, CircleUser, Search } from "lucide-react"
@@ -27,12 +28,12 @@ const sidebarVariants = cva(
   }
 )
 
-interface SidebarProps extends React.HTMLAttributes<HTMLElement> {
+interface SidebarProps extends React.HTMLAttributes<HTMLDivElement> {
   side?: "left" | "right"
   variant?: "default" | "secondary"
 }
 
-const Sidebar = React.forwardRef<HTMLElement, SidebarProps>(
+const Sidebar = React.forwardRef<HTMLDivElement, SidebarProps>(
   ({ className, side, variant, ...props }, ref) => {
     return (
       <div className={cn(sidebarVariants({ side, variant, className }))} ref={ref} {...props} />

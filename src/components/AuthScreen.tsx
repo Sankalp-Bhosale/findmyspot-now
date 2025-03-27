@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/Input';
+import { CustomInput } from '@/components/ui/CustomInput';
 import { Button } from '@/components/ui/Button';
 import { useAuth } from '@/context/AuthContext';
 import { Eye, EyeOff, Mail, User, Lock, ArrowLeft } from 'lucide-react';
@@ -112,7 +112,7 @@ const AuthScreen: React.FC = () => {
       <div className="flex-1 flex flex-col justify-center p-6 max-w-md mx-auto w-full">
         <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
           {isSignUp && (
-            <Input
+            <CustomInput
               label="NAME"
               placeholder="Aryan Panjwani"
               name="name"
@@ -124,7 +124,7 @@ const AuthScreen: React.FC = () => {
             />
           )}
           
-          <Input
+          <CustomInput
             label="EMAIL"
             placeholder="aryanthedeveloper@gmail.com"
             name="email"
@@ -136,7 +136,7 @@ const AuthScreen: React.FC = () => {
             autoComplete="email"
           />
           
-          <Input
+          <CustomInput
             label="PASSWORD"
             placeholder="••••••••"
             name="password"
@@ -150,7 +150,7 @@ const AuthScreen: React.FC = () => {
           
           <Button
             type="submit"
-            variant="primary"
+            variant="default"
             size="lg"
             fullWidth
             isLoading={isLoading}

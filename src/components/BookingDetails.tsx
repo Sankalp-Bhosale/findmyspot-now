@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import NavBar from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
+import { CustomInput } from '@/components/ui/CustomInput';
 import { useParking } from '@/context/ParkingContext';
 import { Car, Calendar, Clock, CreditCard, ArrowLeft, ArrowRight } from 'lucide-react';
 
@@ -143,7 +143,7 @@ const BookingDetails: React.FC = () => {
           <h3 className="text-lg font-bold mb-4">Vehicle Details</h3>
           
           <div className="space-y-4">
-            <Input
+            <CustomInput
               label="Car"
               placeholder="Maruti Swift"
               name="carModel"
@@ -153,7 +153,7 @@ const BookingDetails: React.FC = () => {
               icon={<Car size={18} />}
             />
             
-            <Input
+            <CustomInput
               label="Number Plate"
               placeholder="GJ 05 DG 8578"
               name="licensePlate"
@@ -198,7 +198,7 @@ const BookingDetails: React.FC = () => {
       {/* Bottom Action Button */}
       <div className="p-4 border-t border-parking-lightgray">
         <Button
-          variant="primary"
+          variant="default"
           size="lg"
           fullWidth
           onClick={handleReserve}

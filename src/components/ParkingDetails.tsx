@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '@/components/ui/NavBar';
@@ -96,7 +95,7 @@ const ParkingDetails: React.FC = () => {
       {/* Bottom Action Button */}
       <div className="p-4 border-t border-parking-lightgray">
         <Button
-          variant="primary"
+          variant="default"
           size="lg"
           fullWidth
           onClick={handlePickSpot}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -203,7 +202,7 @@ const FloorSelection: React.FC = () => {
       {/* Bottom Action Button */}
       <div className="p-4 border-t border-parking-lightgray">
         <Button
-          variant="primary"
+          variant="default"
           size="lg"
           fullWidth
           onClick={handleProceed}
