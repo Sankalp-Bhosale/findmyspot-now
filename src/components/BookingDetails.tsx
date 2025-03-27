@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -54,9 +53,7 @@ const BookingDetails: React.FC = () => {
     
     if (!formData.licensePlate.trim()) {
       newErrors.licensePlate = 'License plate is required';
-    } else if (!/^[A-Z0-9 ]{5,10}$/i.test(formData.licensePlate.trim())) {
-      newErrors.licensePlate = 'Enter a valid license plate';
-    }
+    } 
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -89,7 +86,7 @@ const BookingDetails: React.FC = () => {
         endTime: leavingTime,
         vehicleDetails: {
           model: formData.carModel,
-          licensePlate: formData.licensePlate
+          licensePlate: formData.licensePlate.toUpperCase()
         },
         price: selectedLocation.pricePerHour * 2 // 2 hours
       });
