@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext } from 'react';
 
 interface ParkingLocation {
@@ -50,6 +49,8 @@ interface ParkingContextType {
   bookings: Booking[];
   createBooking: (booking: Omit<Booking, 'id' | 'status'>) => Promise<string>;
   activeBooking: Booking | null;
+  selectedDuration: number;
+  setSelectedDuration: (duration: number) => void;
 }
 
 const ParkingContext = createContext<ParkingContextType | undefined>(undefined);
@@ -119,6 +120,7 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
   const [availableSpots, setAvailableSpots] = useState<ParkingSpot[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<number>(1); // Default to 1 hour
 
   const fetchNearbyLocations = async (lat: number, lng: number) => {
     // In a real app, this would be an API call
@@ -163,7 +165,9 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       getAvailableSpots,
       bookings,
       createBooking,
-      activeBooking
+      activeBooking,
+      selectedDuration,
+      setSelectedDuration
     }}>
       {children}
     </ParkingContext.Provider>

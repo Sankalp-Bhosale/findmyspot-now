@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import NavBar from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
@@ -7,8 +8,8 @@ import { MapPin, Clock, Car, ChevronRight } from 'lucide-react';
 
 const ParkingDetails: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedLocation } = useParking();
-  const [selectedDuration, setSelectedDuration] = useState(1); // Default 1 hour
+  const { selectedLocation, selectedDuration, setSelectedDuration } = useParking();
+  const [localDuration, setLocalDuration] = useState(selectedDuration); // Use context value as initial
   
   if (!selectedLocation) {
     navigate('/home');
@@ -18,6 +19,8 @@ const ParkingDetails: React.FC = () => {
   const durations = [1, 2, 3, 4, 5];
   
   const handlePickSpot = () => {
+    // Save the selected duration to context before navigating
+    setSelectedDuration(localDuration);
     navigate('/floor-selection');
   };
 
@@ -66,9 +69,9 @@ const ParkingDetails: React.FC = () => {
             {durations.map(duration => (
               <button
                 key={duration}
-                onClick={() => setSelectedDuration(duration)}
+                onClick={() => setLocalDuration(duration)}
                 className={`flex-shrink-0 rounded-lg border-2 px-6 py-3 transition-all ${
-                  selectedDuration === duration 
+                  localDuration === duration 
                     ? 'border-parking-yellow bg-parking-yellow text-parking-dark' 
                     : 'border-parking-lightgray text-parking-dark'
                 }`}
@@ -83,11 +86,11 @@ const ParkingDetails: React.FC = () => {
         <div className="mt-8 bg-parking-lightgray/30 rounded-lg p-4 flex justify-between items-center animate-scale-in">
           <div>
             <p className="text-sm text-parking-gray">Estimated Price</p>
-            <p className="text-xl font-bold">₹{selectedLocation.pricePerHour * selectedDuration}</p>
+            <p className="text-xl font-bold">₹{selectedLocation.pricePerHour * localDuration}</p>
           </div>
           <div className="flex items-center text-sm text-parking-dark">
             <Clock size={16} className="mr-1" />
-            <span>{selectedDuration} {selectedDuration === 1 ? 'hour' : 'hours'}</span>
+            <span>{localDuration} {localDuration === 1 ? 'hour' : 'hours'}</span>
           </div>
         </div>
       </div>

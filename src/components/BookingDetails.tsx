@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -19,7 +20,7 @@ interface BookingFormErrors {
 
 const BookingDetails: React.FC = () => {
   const navigate = useNavigate();
-  const { selectedLocation, selectedSpot, createBooking } = useParking();
+  const { selectedLocation, selectedSpot, createBooking, selectedDuration } = useParking();
   const [isLoading, setIsLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'google' | 'paytm'>('google');
   
@@ -38,7 +39,7 @@ const BookingDetails: React.FC = () => {
   // Calculate arrival and leaving time
   const now = new Date();
   const arrivalTime = new Date(now.getTime());
-  const leavingTime = new Date(now.getTime() + 2 * 60 * 60 * 1000); // Default: 2 hours later
+  const leavingTime = new Date(now.getTime() + selectedDuration * 60 * 60 * 1000); // Use selectedDuration
   
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -88,7 +89,7 @@ const BookingDetails: React.FC = () => {
           model: formData.carModel,
           licensePlate: formData.licensePlate.toUpperCase()
         },
-        price: selectedLocation.pricePerHour * 2 // 2 hours
+        price: selectedLocation.pricePerHour * selectedDuration // Use selectedDuration for pricing
       });
       
       toast.success("Booking confirmed!");
@@ -120,7 +121,7 @@ const BookingDetails: React.FC = () => {
             <div className="w-10 h-0 border-t-2 border-dashed border-parking-lightgray"></div>
             
             <div className="bg-parking-yellow text-parking-dark text-xs font-medium px-2 py-1 rounded">
-              2 hrs
+              {selectedDuration} {selectedDuration === 1 ? 'hr' : 'hrs'}
             </div>
             
             <div className="w-10 h-0 border-t-2 border-dashed border-parking-lightgray"></div>
@@ -187,7 +188,7 @@ const BookingDetails: React.FC = () => {
         <div className="mt-8 bg-parking-lightgray/30 rounded-lg p-4 flex justify-between items-center animate-scale-in">
           <div>
             <p className="text-sm text-parking-gray">AMOUNT TO BE PAID</p>
-            <p className="text-xl font-bold">₹{selectedLocation.pricePerHour * 2}</p>
+            <p className="text-xl font-bold">₹{selectedLocation.pricePerHour * selectedDuration}</p>
           </div>
         </div>
       </div>
