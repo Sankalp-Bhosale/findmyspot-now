@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
+import { useExtendedAuth } from '@/hooks/useExtendedAuth';
 import { CustomInput } from '@/components/ui/CustomInput';
 import { Button } from '@/components/ui/Button';
 import { User, Mail, Phone, Camera } from 'lucide-react';
@@ -9,7 +9,7 @@ import NavigationDrawer from '@/components/ui/NavigationDrawer';
 import { toast } from 'sonner';
 
 const ProfilePage: React.FC = () => {
-  const { user, updateProfile, isLoading } = useAuth();
+  const { user, updateProfile, isLoading } = useExtendedAuth();
   
   const [name, setName] = useState(user?.name || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -52,7 +52,7 @@ const ProfilePage: React.FC = () => {
             <div className="relative">
               <img 
                 src={user.profilePicture} 
-                alt={user.name}
+                alt={user.name || 'User'}
                 className="w-24 h-24 rounded-full object-cover border-2 border-parking-yellow"
               />
               <button className="absolute bottom-0 right-0 bg-parking-yellow text-white p-2 rounded-full">
@@ -62,14 +62,14 @@ const ProfilePage: React.FC = () => {
           ) : (
             <div className="relative">
               <div className="w-24 h-24 rounded-full bg-parking-yellow text-white flex items-center justify-center">
-                <span className="text-3xl font-medium">{user?.name.charAt(0).toUpperCase()}</span>
+                <span className="text-3xl font-medium">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
               </div>
               <button className="absolute bottom-0 right-0 bg-white text-parking-dark p-2 rounded-full shadow-md border border-parking-lightgray">
                 <Camera size={16} />
               </button>
             </div>
           )}
-          <h2 className="text-xl font-bold mt-4">{user?.name}</h2>
+          <h2 className="text-xl font-bold mt-4">{user?.name || 'User'}</h2>
           <p className="text-parking-gray">{user?.email}</p>
         </div>
         

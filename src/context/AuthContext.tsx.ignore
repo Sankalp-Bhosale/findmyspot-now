@@ -1,0 +1,7 @@
+
+// This is not a real file that will be created, just a reference for how the AuthContext should be modified.
+// We cannot directly modify the read-only AuthContext.tsx file, but this shows what needs to be changed:
+
+// The User type should be imported from our custom definition instead of from Supabase
+// import { User } from '@supabase/supabase-js';  <- This should be removed
+// import type { User } from '../types/supabase'; <- This should be added instead

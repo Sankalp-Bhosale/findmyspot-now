@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -36,13 +37,23 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 
+// Define the Toaster component in a way that React hooks work correctly
+function AppToaster() {
+  return <Toaster />;
+}
+
+// Define the Sonner component in a way that React hooks work correctly
+function AppSonner() {
+  return <Sonner />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
         <ParkingProvider>
-          <Toaster />
-          <Sonner />
+          <AppToaster />
+          <AppSonner />
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}

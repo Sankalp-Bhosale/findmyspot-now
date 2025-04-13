@@ -6,7 +6,7 @@ import {
   DrawerContent, 
   DrawerTrigger 
 } from '@/components/ui/drawer';
-import { useAuth } from '@/context/AuthContext';
+import { useExtendedAuth } from '@/hooks/useExtendedAuth';
 import { useNavigate } from 'react-router-dom';
 import {
   Home,
@@ -27,7 +27,7 @@ interface NavigationDrawerProps {
 }
 
 const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ children }) => {
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useExtendedAuth();
   const navigate = useNavigate();
   const [open, setOpen] = React.useState(false);
 
@@ -66,16 +66,16 @@ const NavigationDrawer: React.FC<NavigationDrawerProps> = ({ children }) => {
               {user?.profilePicture ? (
                 <img 
                   src={user.profilePicture} 
-                  alt={user.name}
+                  alt={user.name || 'User'}
                   className="w-10 h-10 rounded-full mr-3"
                 />
               ) : (
                 <div className="w-10 h-10 rounded-full bg-parking-yellow text-white flex items-center justify-center mr-3">
-                  <span className="text-lg font-medium">{user?.name.charAt(0).toUpperCase()}</span>
+                  <span className="text-lg font-medium">{user?.name?.charAt(0).toUpperCase() || 'U'}</span>
                 </div>
               )}
               <div>
-                <h3 className="font-medium text-lg">{user?.name}</h3>
+                <h3 className="font-medium text-lg">{user?.name || 'User'}</h3>
                 <p className="text-xs text-parking-gray">{user?.email}</p>
               </div>
             </div>
