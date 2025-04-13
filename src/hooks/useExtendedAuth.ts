@@ -19,21 +19,24 @@ export const useExtendedAuth = () => {
           
         if (data && !error) {
           // Extend the user object with profile data
-          setExtendedUser({
+          const userWithProfile = {
             ...auth.user,
             name: data.name || auth.user.email?.split('@')[0] || 'User',
             phone: data.phone || '',
-            // You could add a placeholder image here if you need profilePicture
             profilePicture: undefined
-          });
+          } as User;
+          
+          setExtendedUser(userWithProfile);
         } else {
           // If there's no profile, still provide a default name based on email
-          setExtendedUser({
+          const userWithDefaults = {
             ...auth.user,
             name: auth.user.email?.split('@')[0] || 'User',
             phone: '',
             profilePicture: undefined
-          });
+          } as User;
+          
+          setExtendedUser(userWithDefaults);
         }
       };
       
@@ -43,5 +46,26 @@ export const useExtendedAuth = () => {
     }
   }, [auth.user]);
   
-  return { ...auth, user: extendedUser || auth.user };
+  return { 
+    ...auth, 
+    user: extendedUser || auth.user as User,
+    updateProfile: async (userData: Partial<{ name: string; email: string; phone: string }>) => {
+      if (!auth.user) return;
+      
+      const { error } = await supabase
+        .from('profiles')
+        .update(userData)
+        .eq('id', auth.user.id);
+      
+      if (error) throw error;
+      
+      // Update the local user state with the new data
+      if (extendedUser) {
+        setExtendedUser({
+          ...extendedUser,
+          ...userData
+        });
+      }
+    }
+  };
 };

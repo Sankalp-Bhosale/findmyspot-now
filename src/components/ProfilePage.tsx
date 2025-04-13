@@ -32,6 +32,7 @@ const ProfilePage: React.FC = () => {
     try {
       await updateProfile({ name, email, phone });
       setIsEditing(false);
+      toast.success('Profile updated successfully');
     } catch (error) {
       toast.error('Failed to update profile');
     }
