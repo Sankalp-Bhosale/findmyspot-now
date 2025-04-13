@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import NavBar from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
 import LocationMarker from '@/components/ui/LocationMarker';
+import NavigationDrawer from '@/components/ui/NavigationDrawer';
 import { useParking } from '@/context/ParkingContext';
 import { Search, MapPin, Navigation } from 'lucide-react';
 
@@ -57,8 +58,14 @@ const MapScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white relative">
+      {/* Header with Navigation */}
+      <div className="fixed top-0 left-0 right-0 bg-white z-50 px-4 py-3 flex items-center border-b border-parking-lightgray">
+        <NavigationDrawer />
+        <h1 className="text-lg font-medium ml-4">Find Parking</h1>
+      </div>
+      
       {/* Map Container */}
-      <div className="w-full h-screen bg-gray-200 relative">
+      <div className="w-full h-screen bg-gray-200 relative pt-12">
         {/* Simple Map Placeholder */}
         <div className="absolute inset-0 bg-[#e5e3df] z-0">
           {/* Grid lines for map */}
@@ -104,7 +111,7 @@ const MapScreen: React.FC = () => {
         </div>
         
         {/* Search Bar */}
-        <div className="absolute top-6 left-0 right-0 px-4 z-20">
+        <div className="absolute top-16 left-0 right-0 px-4 z-20">
           <div className="bg-white rounded-full shadow-lg flex items-center px-4 py-2">
             <Search size={20} className="text-parking-gray mr-2" />
             <input
