@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -238,7 +239,7 @@ const MapScreen: React.FC = () => {
         distance: location.distance || "Unknown",
         availableSpots: location.available_spots,
         totalSpots: location.total_spots,
-        pricePerHour: location.price_perHour,
+        pricePerHour: location.price_per_hour, // Fixed: Changed from price_perHour to price_per_hour
         floors: 3
       };
       
