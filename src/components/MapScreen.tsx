@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import NavBar from '@/components/ui/NavBar';
@@ -8,6 +8,7 @@ import NavigationDrawer from '@/components/ui/NavigationDrawer';
 import { useParking } from '@/context/ParkingContext';
 import { Search, MapPin, Navigation, Loader } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 
 // Define an interface for parking locations from Supabase
 interface ParkingLocation {
@@ -22,13 +23,17 @@ interface ParkingLocation {
   distance?: string;
 }
 
+const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your actual API key
+
 const MapScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { setSelectedLocation } = useParking();
+  const { setSelectedLocation, fetchNearbyLocations, parkingLocations } = useParking();
   const [isLoading, setIsLoading] = useState(true);
-  const [parkingLocations, setParkingLocations] = useState<ParkingLocation[]>([]);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [localParkingLocations, setLocalParkingLocations] = useState<ParkingLocation[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<ParkingLocation[]>([]);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
@@ -44,7 +49,7 @@ const MapScreen: React.FC = () => {
       }
 
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
       script.async = true;
       script.defer = true;
       script.onload = () => setMapLoaded(true);
@@ -67,7 +72,7 @@ const MapScreen: React.FC = () => {
         };
         setUserLocation(userPos);
         initializeMap(userPos);
-        loadParkingLocations(userPos);
+        fetchNearbyLocations(userPos.lat, userPos.lng);
       },
       (error) => {
         console.error('Error getting location:', error);
@@ -75,10 +80,73 @@ const MapScreen: React.FC = () => {
         const defaultPos = { lat: 19.076, lng: 72.877 };
         setUserLocation(defaultPos);
         initializeMap(defaultPos);
-        loadParkingLocations(defaultPos);
+        fetchNearbyLocations(defaultPos.lat, defaultPos.lng);
       }
     );
-  }, [mapLoaded]);
+  }, [mapLoaded, fetchNearbyLocations]);
+
+  // Update local state when parking locations change
+  useEffect(() => {
+    if (parkingLocations.length > 0) {
+      const mappedLocations = parkingLocations.map(loc => ({
+        id: loc.id,
+        name: loc.name,
+        address: loc.address,
+        lat: loc.coordinates.lat,
+        lng: loc.coordinates.lng,
+        price_per_hour: loc.pricePerHour,
+        total_spots: loc.totalSpots,
+        available_spots: loc.availableSpots,
+        distance: loc.distance
+      }));
+      
+      setLocalParkingLocations(mappedLocations);
+      setIsLoading(false);
+      
+      // Add markers to map
+      if (mapRef.current) {
+        updateMapMarkers(mappedLocations);
+      }
+    }
+  }, [parkingLocations]);
+
+  // Set up real-time subscription to parking_locations table
+  useEffect(() => {
+    // Subscribe to changes in parking_locations table
+    const channel = supabase
+      .channel('public:parking_locations')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'parking_locations' }, 
+        (payload) => {
+          console.log('Real-time update:', payload);
+          // Refresh the locations when data changes
+          if (userLocation) {
+            fetchNearbyLocations(userLocation.lat, userLocation.lng);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userLocation, fetchNearbyLocations]);
+
+  // Update search results when query changes
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSearchResults([]);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = localParkingLocations.filter(location => 
+      location.name.toLowerCase().includes(query) ||
+      location.address.toLowerCase().includes(query)
+    );
+    
+    setSearchResults(filtered);
+  }, [searchQuery, localParkingLocations]);
 
   const initializeMap = (center: { lat: number, lng: number }) => {
     if (!mapLoaded || !document.getElementById('map')) return;
@@ -119,67 +187,34 @@ const MapScreen: React.FC = () => {
     });
   };
 
-  // Load parking locations from Supabase
-  const loadParkingLocations = async (userPos: { lat: number, lng: number }) => {
-    try {
-      setIsLoading(true);
-      
-      const { data, error } = await supabase
-        .from('parking_locations')
-        .select('*');
-        
-      if (error) throw error;
-      
-      if (data) {
-        // Calculate distance from user
-        const locationsWithDistance = data.map(location => {
-          const distance = calculateDistance(
-            userPos.lat, 
-            userPos.lng, 
-            location.lat, 
-            location.lng
-          );
-          
-          return {
-            ...location,
-            distance: `${distance.toFixed(1)} km`
-          };
-        });
-        
-        setParkingLocations(locationsWithDistance);
-        
-        // Add markers to map
-        if (mapRef.current) {
-          // Clear existing markers
-          markersRef.current.forEach(marker => marker.setMap(null));
-          markersRef.current = [];
-          
-          // Add new markers
-          locationsWithDistance.forEach(location => {
-            const marker = new google.maps.Marker({
-              position: { lat: location.lat, lng: location.lng },
-              map: mapRef.current,
-              title: location.name,
-              icon: {
-                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-              }
-            });
-            
-            marker.addListener('click', () => {
-              handleLocationSelect(location.id);
-            });
-            
-            markersRef.current.push(marker);
-          });
+  // Update map markers when locations change
+  const updateMapMarkers = useCallback((locations: ParkingLocation[]) => {
+    if (!mapRef.current) return;
+    
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+    
+    // Add new markers
+    locations.forEach(location => {
+      const marker = new google.maps.Marker({
+        position: { lat: location.lat, lng: location.lng },
+        map: mapRef.current,
+        title: location.name,
+        icon: {
+          url: selectedLocationId === location.id 
+            ? 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+            : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
         }
-      }
-    } catch (error) {
-      console.error('Error loading parking locations:', error);
-      toast.error("Failed to load parking locations");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      });
+      
+      marker.addListener('click', () => {
+        handleLocationSelect(location.id);
+      });
+      
+      markersRef.current.push(marker);
+    });
+  }, [selectedLocationId]);
 
   // Haversine formula to calculate distance between two coordinates
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -203,24 +238,14 @@ const MapScreen: React.FC = () => {
     setSelectedLocationId(locationId);
     
     // Find the selected location
-    const location = parkingLocations.find(loc => loc.id === locationId);
+    const location = localParkingLocations.find(loc => loc.id === locationId);
     
     if (location && mapRef.current) {
       // Pan to the selected location
       mapRef.current.panTo({ lat: location.lat, lng: location.lng });
       
       // Update markers to highlight the selected one
-      markersRef.current.forEach(marker => {
-        if (marker.getTitle() === location.name) {
-          marker.setIcon({
-            url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-          });
-        } else {
-          marker.setIcon({
-            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
-          });
-        }
-      });
+      updateMapMarkers(localParkingLocations);
       
       // Convert to the format expected by ParkingContext
       const formattedLocation = {
@@ -248,12 +273,20 @@ const MapScreen: React.FC = () => {
     }
   };
 
-  const filteredLocations = searchQuery 
-    ? parkingLocations.filter(location => 
-        location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        location.address.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : parkingLocations;
+  const handleSearchClick = () => {
+    setIsSearchOpen(true);
+    setTimeout(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    }, 100);
+  };
+
+  const handleSearchSelect = (locationId: string) => {
+    handleLocationSelect(locationId);
+    setIsSearchOpen(false);
+    setSearchQuery('');
+  };
 
   return (
     <div className="min-h-screen bg-white relative">
@@ -276,29 +309,64 @@ const MapScreen: React.FC = () => {
         
         {/* Search Bar */}
         <div className="absolute top-16 left-0 right-0 px-4 z-20">
-          <div className="bg-white rounded-full shadow-lg flex items-center px-4 py-2">
+          <div 
+            className="bg-white rounded-full shadow-lg flex items-center px-4 py-2 cursor-pointer"
+            onClick={handleSearchClick}
+          >
             <Search size={20} className="text-parking-gray mr-2" />
-            <input
-              ref={searchInputRef}
-              type="text"
-              placeholder="Where do you want to park?"
-              className="flex-1 bg-transparent border-none outline-none text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="text-parking-gray p-1"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-            )}
+            <span className="text-sm text-parking-gray">Where do you want to park?</span>
           </div>
         </div>
+        
+        {/* Search Dropdown */}
+        {isSearchOpen && (
+          <div className="absolute top-28 left-0 right-0 px-4 z-30">
+            <div className="bg-white rounded-lg shadow-lg">
+              <Command>
+                <CommandInput
+                  ref={searchInputRef}
+                  placeholder="Search by location name or address..."
+                  value={searchQuery}
+                  onValueChange={setSearchQuery}
+                  className="h-12"
+                />
+                <CommandList>
+                  <CommandEmpty>No locations found.</CommandEmpty>
+                  <CommandGroup>
+                    {searchResults.map(location => (
+                      <CommandItem
+                        key={location.id}
+                        onSelect={() => handleSearchSelect(location.id)}
+                      >
+                        <div className="flex flex-col">
+                          <span className="font-medium">{location.name}</span>
+                          <span className="text-xs text-parking-gray">{location.address}</span>
+                          <div className="flex items-center mt-1">
+                            <MapPin size={12} className="text-parking-yellow" />
+                            <span className="text-xs ml-1">{location.distance} away</span>
+                            <span className="mx-2 text-parking-gray">•</span>
+                            <span className={`text-xs ${location.available_spots > 0 ? 'text-parking-success' : 'text-parking-error'}`}>
+                              {location.available_spots > 0 ? `${location.available_spots} spots available` : 'No spots available'}
+                            </span>
+                          </div>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+              <div className="p-2 flex justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsSearchOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Bottom Overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/80 to-transparent h-32 z-10"></div>
@@ -310,24 +378,24 @@ const MapScreen: React.FC = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-lg font-bold">
-                    {parkingLocations.find(loc => loc.id === selectedLocationId)?.name}
+                    {localParkingLocations.find(loc => loc.id === selectedLocationId)?.name}
                   </h3>
                   <p className="text-xs text-parking-gray mt-1 line-clamp-1">
-                    {parkingLocations.find(loc => loc.id === selectedLocationId)?.address}
+                    {localParkingLocations.find(loc => loc.id === selectedLocationId)?.address}
                   </p>
                   <div className="flex items-center mt-2">
                     <MapPin size={14} className="text-parking-yellow" />
                     <span className="text-xs ml-1">
-                      {parkingLocations.find(loc => loc.id === selectedLocationId)?.distance} away
+                      {localParkingLocations.find(loc => loc.id === selectedLocationId)?.distance} away
                     </span>
                     <span className="mx-2 text-parking-gray">•</span>
                     <span className="text-xs text-parking-success">
-                      {parkingLocations.find(loc => loc.id === selectedLocationId)?.available_spots} spots available
+                      {localParkingLocations.find(loc => loc.id === selectedLocationId)?.available_spots} spots available
                     </span>
                   </div>
                 </div>
                 <div className="bg-parking-lightgray rounded-lg px-3 py-1">
-                  <p className="text-xs font-medium text-parking-dark">₹{parkingLocations.find(loc => loc.id === selectedLocationId)?.price_per_hour}/hr</p>
+                  <p className="text-xs font-medium text-parking-dark">₹{localParkingLocations.find(loc => loc.id === selectedLocationId)?.price_per_hour}/hr</p>
                 </div>
               </div>
               <Button
