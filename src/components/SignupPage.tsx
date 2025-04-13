@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { CustomInput } from '@/components/ui/CustomInput';
@@ -8,7 +8,7 @@ import { Mail, Key, User, Phone, AlertCircle, UserPlus } from 'lucide-react';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signUp, googleSignIn, isLoading } = useAuth();
+  const { signUp, googleSignIn, isLoading, isAuthenticated } = useAuth();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -17,7 +17,19 @@ const SignupPage: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/home');
+    }
+  }, [isAuthenticated, navigate]);
+
   const validateForm = () => {
+    if (!name || !email || !password) {
+      setErrorMessage('Name, email, and password are required');
+      return false;
+    }
+    
     if (password !== confirmPassword) {
       setErrorMessage('Passwords do not match');
       return false;
@@ -46,18 +58,18 @@ const SignupPage: React.FC = () => {
     
     try {
       await signUp(name, email, password, phone);
-      navigate('/home');
-    } catch (error) {
-      setErrorMessage('Failed to create account. Please try again.');
+      // Auth state will handle navigation, but we might need to inform user to check email
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to create account');
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
       await googleSignIn();
-      navigate('/home');
-    } catch (error) {
-      setErrorMessage('Google sign-in failed. Please try again.');
+      // Redirection handled by OAuth
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Google sign-in failed');
     }
   };
 

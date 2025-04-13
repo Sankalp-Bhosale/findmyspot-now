@@ -4,42 +4,241 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import NavBar from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
-import LocationMarker from '@/components/ui/LocationMarker';
 import NavigationDrawer from '@/components/ui/NavigationDrawer';
 import { useParking } from '@/context/ParkingContext';
-import { Search, MapPin, Navigation } from 'lucide-react';
+import { Search, MapPin, Navigation, Loader } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+
+// Define an interface for parking locations from Supabase
+interface ParkingLocation {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  price_per_hour: number;
+  total_spots: number;
+  available_spots: number;
+  distance?: string;
+}
 
 const MapScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { parkingLocations, fetchNearbyLocations, setSelectedLocation } = useParking();
+  const { setSelectedLocation } = useParking();
   const [isLoading, setIsLoading] = useState(true);
+  const [parkingLocations, setParkingLocations] = useState<ParkingLocation[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Mock user location
-  const userLocation = { lat: 19.9975, lng: 73.7898 };
-
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
+  const markersRef = useRef<google.maps.Marker[]>([]);
+  
+  // Load Google Maps script
   useEffect(() => {
-    const loadLocations = async () => {
-      try {
-        setIsLoading(true);
-        await fetchNearbyLocations(userLocation.lat, userLocation.lng);
-      } catch (error) {
-        toast.error("Failed to load parking locations");
-      } finally {
-        setIsLoading(false);
+    const loadGoogleMapsScript = () => {
+      if (window.google?.maps) {
+        setMapLoaded(true);
+        return;
       }
+
+      const script = document.createElement('script');
+      script.src = `https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places`;
+      script.async = true;
+      script.defer = true;
+      script.onload = () => setMapLoaded(true);
+      document.head.appendChild(script);
     };
 
-    loadLocations();
+    loadGoogleMapsScript();
   }, []);
+
+  // Initialize map after script loads
+  useEffect(() => {
+    if (!mapLoaded) return;
+
+    // Try to get user's location
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const userPos = {
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        };
+        setUserLocation(userPos);
+        initializeMap(userPos);
+        loadParkingLocations(userPos);
+      },
+      (error) => {
+        console.error('Error getting location:', error);
+        // Default location (Mumbai)
+        const defaultPos = { lat: 19.076, lng: 72.877 };
+        setUserLocation(defaultPos);
+        initializeMap(defaultPos);
+        loadParkingLocations(defaultPos);
+      }
+    );
+  }, [mapLoaded]);
+
+  const initializeMap = (center: { lat: number, lng: number }) => {
+    if (!mapLoaded || !document.getElementById('map')) return;
+
+    const mapOptions: google.maps.MapOptions = {
+      center,
+      zoom: 14,
+      disableDefaultUI: true,
+      zoomControl: true,
+      fullscreenControl: true,
+      styles: [
+        {
+          featureType: 'poi',
+          elementType: 'labels',
+          stylers: [{ visibility: 'off' }]
+        }
+      ]
+    };
+
+    mapRef.current = new google.maps.Map(
+      document.getElementById('map') as HTMLElement, 
+      mapOptions
+    );
+
+    // Add user marker
+    new google.maps.Marker({
+      position: center,
+      map: mapRef.current,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 7,
+        fillColor: '#4285F4',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+      },
+      title: 'Your Location'
+    });
+  };
+
+  // Load parking locations from Supabase
+  const loadParkingLocations = async (userPos: { lat: number, lng: number }) => {
+    try {
+      setIsLoading(true);
+      
+      const { data, error } = await supabase
+        .from('parking_locations')
+        .select('*');
+        
+      if (error) throw error;
+      
+      if (data) {
+        // Calculate distance from user
+        const locationsWithDistance = data.map(location => {
+          const distance = calculateDistance(
+            userPos.lat, 
+            userPos.lng, 
+            location.lat, 
+            location.lng
+          );
+          
+          return {
+            ...location,
+            distance: `${distance.toFixed(1)} km`
+          };
+        });
+        
+        setParkingLocations(locationsWithDistance);
+        
+        // Add markers to map
+        if (mapRef.current) {
+          // Clear existing markers
+          markersRef.current.forEach(marker => marker.setMap(null));
+          markersRef.current = [];
+          
+          // Add new markers
+          locationsWithDistance.forEach(location => {
+            const marker = new google.maps.Marker({
+              position: { lat: location.lat, lng: location.lng },
+              map: mapRef.current,
+              title: location.name,
+              icon: {
+                url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+              }
+            });
+            
+            marker.addListener('click', () => {
+              handleLocationSelect(location.id);
+            });
+            
+            markersRef.current.push(marker);
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error loading parking locations:', error);
+      toast.error("Failed to load parking locations");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Haversine formula to calculate distance between two coordinates
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2); 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const d = R * c; // Distance in km
+    return d;
+  };
+
+  const deg2rad = (deg: number) => {
+    return deg * (Math.PI/180);
+  };
 
   const handleLocationSelect = (locationId: string) => {
     setSelectedLocationId(locationId);
+    
+    // Find the selected location
     const location = parkingLocations.find(loc => loc.id === locationId);
-    if (location) {
-      setSelectedLocation(location);
+    
+    if (location && mapRef.current) {
+      // Pan to the selected location
+      mapRef.current.panTo({ lat: location.lat, lng: location.lng });
+      
+      // Update markers to highlight the selected one
+      markersRef.current.forEach(marker => {
+        if (marker.getTitle() === location.name) {
+          marker.setIcon({
+            url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+          });
+        } else {
+          marker.setIcon({
+            url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+          });
+        }
+      });
+      
+      // Convert to the format expected by ParkingContext
+      const formattedLocation = {
+        id: location.id,
+        name: location.name,
+        address: location.address,
+        coordinates: {
+          lat: location.lat,
+          lng: location.lng
+        },
+        distance: location.distance || "Unknown",
+        availableSpots: location.available_spots,
+        totalSpots: location.total_spots,
+        pricePerHour: location.price_per_hour,
+        floors: 3  // Assuming all locations have 3 floors for now
+      };
+      
+      setSelectedLocation(formattedLocation);
     }
   };
 
@@ -65,50 +264,15 @@ const MapScreen: React.FC = () => {
       </div>
       
       {/* Map Container */}
-      <div className="w-full h-screen bg-gray-200 relative pt-12">
-        {/* Simple Map Placeholder */}
-        <div className="absolute inset-0 bg-[#e5e3df] z-0">
-          {/* Grid lines for map */}
-          <div className="w-full h-full" style={{ 
-            backgroundImage: 'linear-gradient(#d1d1d1 1px, transparent 1px), linear-gradient(90deg, #d1d1d1 1px, transparent 1px)',
-            backgroundSize: '20px 20px'
-          }}></div>
-          
-          {/* Roads */}
-          <div className="absolute top-1/2 left-0 right-0 h-6 bg-gray-400 transform -translate-y-1/2"></div>
-          <div className="absolute top-0 bottom-0 left-1/4 w-6 bg-gray-400"></div>
-          <div className="absolute top-3/4 left-1/4 right-0 h-4 bg-gray-400"></div>
-          
-          {/* Location Markers */}
-          {!isLoading && filteredLocations.map(location => (
-            <div
-              key={location.id}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2"
-              style={{ 
-                top: `${30 + Math.random() * 40}%`, 
-                left: `${30 + Math.random() * 40}%` 
-              }}
-            >
-              <LocationMarker
-                name={location.name}
-                distance={location.distance}
-                available={location.availableSpots}
-                selected={selectedLocationId === location.id}
-                onClick={() => handleLocationSelect(location.id)}
-              />
-            </div>
-          ))}
-          
-          {/* User Location */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <div className="relative">
-              <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center border-2 border-white">
-                <Navigation size={14} className="text-white" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-white rounded-full border border-blue-500 animate-ping"></div>
-            </div>
+      <div className="w-full h-screen pt-12 relative">
+        {!mapLoaded || isLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+            <Loader className="animate-spin h-8 w-8 text-parking-yellow" />
+            <span className="ml-2">Loading map...</span>
           </div>
-        </div>
+        ) : (
+          <div id="map" className="w-full h-full"></div>
+        )}
         
         {/* Search Bar */}
         <div className="absolute top-16 left-0 right-0 px-4 z-20">
@@ -158,12 +322,12 @@ const MapScreen: React.FC = () => {
                     </span>
                     <span className="mx-2 text-parking-gray">•</span>
                     <span className="text-xs text-parking-success">
-                      {parkingLocations.find(loc => loc.id === selectedLocationId)?.availableSpots} spots available
+                      {parkingLocations.find(loc => loc.id === selectedLocationId)?.available_spots} spots available
                     </span>
                   </div>
                 </div>
                 <div className="bg-parking-lightgray rounded-lg px-3 py-1">
-                  <p className="text-xs font-medium text-parking-dark">₹{parkingLocations.find(loc => loc.id === selectedLocationId)?.pricePerHour}/hr</p>
+                  <p className="text-xs font-medium text-parking-dark">₹{parkingLocations.find(loc => loc.id === selectedLocationId)?.price_per_hour}/hr</p>
                 </div>
               </div>
               <Button

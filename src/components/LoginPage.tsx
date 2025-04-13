@@ -1,6 +1,6 @@
 
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { CustomInput } from '@/components/ui/CustomInput';
 import { Button } from '@/components/ui/Button';
@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, googleSignIn, resetPassword, isLoading } = useAuth();
+  const location = useLocation();
+  const { signIn, googleSignIn, resetPassword, isLoading, isAuthenticated } = useAuth();
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,24 +18,36 @@ const LoginPage: React.FC = () => {
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
 
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/home');
+    }
+  }, [isAuthenticated, navigate]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     
+    if (!email || !password) {
+      setErrorMessage('Email and password are required');
+      return;
+    }
+    
     try {
       await signIn(email, password);
-      navigate('/home');
-    } catch (error) {
-      setErrorMessage('Invalid email or password. Please try again.');
+      // Auth state change will handle navigation
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to sign in');
     }
   };
 
   const handleGoogleSignIn = async () => {
     try {
       await googleSignIn();
-      navigate('/home');
-    } catch (error) {
-      setErrorMessage('Google sign-in failed. Please try again.');
+      // Redirection handled by OAuth
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Google sign-in failed');
     }
   };
 
@@ -42,7 +55,7 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     
     if (!resetEmail) {
-      setErrorMessage('Please enter your email address.');
+      setErrorMessage('Please enter your email address');
       return;
     }
     
@@ -50,8 +63,8 @@ const LoginPage: React.FC = () => {
       await resetPassword(resetEmail);
       setIsResetDialogOpen(false);
       setResetEmail('');
-    } catch (error) {
-      setErrorMessage('Failed to send reset link. Please try again.');
+    } catch (error: any) {
+      setErrorMessage(error.message || 'Failed to send reset link');
     }
   };
 

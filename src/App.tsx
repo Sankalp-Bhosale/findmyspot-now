@@ -32,15 +32,7 @@ import BookingsPage from "./pages/BookingsPage";
 import SettingsPage from "./pages/SettingsPage";
 
 // Route Protection Component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = localStorage.getItem('parkitUser');
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
+import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
 

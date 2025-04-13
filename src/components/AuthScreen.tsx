@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CustomInput } from '@/components/ui/CustomInput';
@@ -21,9 +21,8 @@ interface FormErrors {
 
 const AuthScreen: React.FC = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, isAuthenticated, isLoading } = useAuth();
   const [isSignUp, setIsSignUp] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
   const [formData, setFormData] = useState<FormData>({
@@ -33,6 +32,13 @@ const AuthScreen: React.FC = () => {
   });
   
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/home');
+    }
+  }, [isAuthenticated, navigate]);
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
@@ -70,21 +76,16 @@ const AuthScreen: React.FC = () => {
     
     if (!validateForm()) return;
     
-    setIsLoading(true);
-    
     try {
       if (isSignUp) {
         await signUp(formData.name, formData.email, formData.password);
-        toast.success("Account created successfully!");
+        toast.success("Account created successfully! Please check your email for verification.");
       } else {
         await signIn(formData.email, formData.password);
-        toast.success("Signed in successfully!");
+        // Auth state will handle navigation
       }
-      navigate('/home');
-    } catch (error) {
-      toast.error("Authentication failed. Please try again.");
-    } finally {
-      setIsLoading(false);
+    } catch (error: any) {
+      toast.error(error.message || "Authentication failed. Please try again.");
     }
   };
 
@@ -114,7 +115,7 @@ const AuthScreen: React.FC = () => {
           {isSignUp && (
             <CustomInput
               label="NAME"
-              placeholder="Aryan Panjwani"
+              placeholder="John Doe"
               name="name"
               value={formData.name}
               onChange={handleChange}
@@ -126,7 +127,7 @@ const AuthScreen: React.FC = () => {
           
           <CustomInput
             label="EMAIL"
-            placeholder="aryanthedeveloper@gmail.com"
+            placeholder="example@email.com"
             name="email"
             type="email"
             value={formData.email}

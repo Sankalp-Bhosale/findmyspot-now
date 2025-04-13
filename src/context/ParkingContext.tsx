@@ -1,4 +1,7 @@
+
 import React, { createContext, useState, useContext } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface ParkingLocation {
   id: string;
@@ -55,44 +58,8 @@ interface ParkingContextType {
 
 const ParkingContext = createContext<ParkingContextType | undefined>(undefined);
 
-// Mock data for parking locations
-const mockParkingLocations: ParkingLocation[] = [
-  {
-    id: 'p1',
-    name: 'D-Mart Mall',
-    address: 'Sanjivini Rd, Parvati Nagar, Nashik, Maharashtra 422005',
-    coordinates: { lat: 19.9975, lng: 73.7898 },
-    distance: '1.2 km',
-    availableSpots: 45,
-    totalSpots: 100,
-    pricePerHour: 50,
-    floors: 3
-  },
-  {
-    id: 'p2',
-    name: 'Central Plaza',
-    address: '123 Main St, Downtown',
-    coordinates: { lat: 19.9915, lng: 73.7828 },
-    distance: '2.5 km',
-    availableSpots: 12,
-    totalSpots: 80,
-    pricePerHour: 60,
-    floors: 2
-  },
-  {
-    id: 'p3',
-    name: 'City Center',
-    address: '456 Park Ave, Uptown',
-    coordinates: { lat: 19.9875, lng: 73.7968 },
-    distance: '3.7 km',
-    availableSpots: 30,
-    totalSpots: 120,
-    pricePerHour: 40,
-    floors: 4
-  }
-];
-
-// Generate mock parking spots
+// Generate mock parking spots for now
+// In a real app, this would be fetched from the backend
 const generateMockSpots = (floor: number): ParkingSpot[] => {
   const spots: ParkingSpot[] = [];
   const totalSpots = 20;
@@ -123,34 +90,111 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
   const [selectedDuration, setSelectedDuration] = useState<number>(1); // Default to 1 hour
 
   const fetchNearbyLocations = async (lat: number, lng: number) => {
-    // In a real app, this would be an API call
-    // For demo purposes, we use mock data
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setParkingLocations(mockParkingLocations);
+    try {
+      // Fetch parking locations from Supabase
+      const { data, error } = await supabase
+        .from('parking_locations')
+        .select('*');
+      
+      if (error) throw error;
+      
+      if (data) {
+        // Calculate distance from user's location
+        const locationsWithDistance = data.map(location => {
+          const distance = calculateDistance(lat, lng, location.lat, location.lng);
+          
+          return {
+            id: location.id,
+            name: location.name,
+            address: location.address,
+            coordinates: {
+              lat: location.lat,
+              lng: location.lng
+            },
+            distance: `${distance.toFixed(1)} km`,
+            availableSpots: location.available_spots,
+            totalSpots: location.total_spots,
+            pricePerHour: location.price_per_hour,
+            floors: 3 // Assuming 3 floors for now
+          };
+        });
+        
+        setParkingLocations(locationsWithDistance);
+      }
+    } catch (error) {
+      console.error('Error fetching nearby locations:', error);
+      toast.error('Failed to load parking locations');
+    }
+  };
+
+  // Haversine formula to calculate distance
+  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371; // Radius of the earth in km
+    const dLat = deg2rad(lat2 - lat1);
+    const dLon = deg2rad(lon2 - lon1);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2); 
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+    const d = R * c; // Distance in km
+    return d;
+  };
+
+  const deg2rad = (deg: number) => {
+    return deg * (Math.PI/180);
   };
 
   const getAvailableSpots = async (locationId: string, floor: number) => {
-    // In a real app, this would be an API call
+    // In a real app, this would be an API call to get real-time spot availability
     // For demo purposes, we generate mock data
-    await new Promise(resolve => setTimeout(resolve, 800));
-    setAvailableSpots(generateMockSpots(floor));
+    try {
+      // For now we're using mock data, but in a real app this would fetch from Supabase
+      setAvailableSpots(generateMockSpots(floor));
+    } catch (error) {
+      console.error('Error getting available spots:', error);
+      toast.error('Failed to load parking spots');
+    }
   };
 
   const createBooking = async (bookingData: Omit<Booking, 'id' | 'status'>): Promise<string> => {
-    // In a real app, this would be an API call
-    // For demo purposes, we create a local booking
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const newBooking: Booking = {
-      ...bookingData,
-      id: `booking-${Date.now()}`,
-      status: 'active'
-    };
-    
-    setBookings(prev => [...prev, newBooking]);
-    setActiveBooking(newBooking);
-    
-    return newBooking.id;
+    try {
+      // In a real app, you would save this booking to Supabase
+      const { data, error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          parking_location_id: bookingData.locationId,
+          start_time: bookingData.startTime.toISOString(),
+          end_time: bookingData.endTime.toISOString(),
+          status: 'active',
+          payment_status: 'pending',
+          amount: bookingData.price
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      if (data) {
+        const newBooking: Booking = {
+          ...bookingData,
+          id: data.id,
+          status: 'active'
+        };
+        
+        setBookings(prev => [...prev, newBooking]);
+        setActiveBooking(newBooking);
+        
+        return data.id;
+      }
+      
+      throw new Error('Failed to create booking');
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      toast.error('Failed to create booking');
+      throw error;
+    }
   };
 
   return (

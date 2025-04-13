@@ -9,7 +9,143 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          amount: number
+          created_at: string
+          end_time: string
+          id: string
+          parking_location_id: string
+          payment_status: string
+          start_time: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          end_time: string
+          id?: string
+          parking_location_id: string
+          payment_status: string
+          start_time: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          end_time?: string
+          id?: string
+          parking_location_id?: string
+          payment_status?: string
+          start_time?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_parking_location_id_fkey"
+            columns: ["parking_location_id"]
+            isOneToOne: false
+            referencedRelation: "parking_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback: {
+        Row: {
+          comment: string | null
+          created_at: string
+          id: string
+          rating: number
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating: number
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          id?: string
+          rating?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parking_locations: {
+        Row: {
+          address: string
+          available_spots: number
+          created_at: string
+          id: string
+          lat: number
+          lng: number
+          name: string
+          price_per_hour: number
+          total_spots: number
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          available_spots: number
+          created_at?: string
+          id?: string
+          lat: number
+          lng: number
+          name: string
+          price_per_hour: number
+          total_spots: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          available_spots?: number
+          created_at?: string
+          id?: string
+          lat?: number
+          lng?: number
+          name?: string
+          price_per_hour?: number
+          total_spots?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string | null
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id: string
+          name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string | null
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
