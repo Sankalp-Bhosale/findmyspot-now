@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -10,7 +9,6 @@ import { Search, MapPin, Navigation, Loader } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 
-// Define an interface for parking locations from Supabase
 interface ParkingLocation {
   id: string;
   name: string;
@@ -23,7 +21,7 @@ interface ParkingLocation {
   distance?: string;
 }
 
-const GOOGLE_MAPS_API_KEY = 'YOUR_GOOGLE_MAPS_API_KEY'; // Replace with your actual API key
+const GOOGLE_MAPS_API_KEY = 'AIzaSyBJHvvAp9JbmJz1upsIrh9AyWxY5NnEOJ8';
 
 const MapScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -40,7 +38,6 @@ const MapScreen: React.FC = () => {
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
   
-  // Load Google Maps script
   useEffect(() => {
     const loadGoogleMapsScript = () => {
       if (window.google?.maps) {
@@ -49,7 +46,7 @@ const MapScreen: React.FC = () => {
       }
 
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
       script.async = true;
       script.defer = true;
       script.onload = () => setMapLoaded(true);
@@ -59,11 +56,9 @@ const MapScreen: React.FC = () => {
     loadGoogleMapsScript();
   }, []);
 
-  // Initialize map after script loads
   useEffect(() => {
     if (!mapLoaded) return;
 
-    // Try to get user's location
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const userPos = {
@@ -76,7 +71,6 @@ const MapScreen: React.FC = () => {
       },
       (error) => {
         console.error('Error getting location:', error);
-        // Default location (Mumbai)
         const defaultPos = { lat: 19.076, lng: 72.877 };
         setUserLocation(defaultPos);
         initializeMap(defaultPos);
@@ -85,7 +79,6 @@ const MapScreen: React.FC = () => {
     );
   }, [mapLoaded, fetchNearbyLocations]);
 
-  // Update local state when parking locations change
   useEffect(() => {
     if (parkingLocations.length > 0) {
       const mappedLocations = parkingLocations.map(loc => ({
@@ -103,23 +96,19 @@ const MapScreen: React.FC = () => {
       setLocalParkingLocations(mappedLocations);
       setIsLoading(false);
       
-      // Add markers to map
       if (mapRef.current) {
         updateMapMarkers(mappedLocations);
       }
     }
   }, [parkingLocations]);
 
-  // Set up real-time subscription to parking_locations table
   useEffect(() => {
-    // Subscribe to changes in parking_locations table
     const channel = supabase
       .channel('public:parking_locations')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'parking_locations' }, 
         (payload) => {
           console.log('Real-time update:', payload);
-          // Refresh the locations when data changes
           if (userLocation) {
             fetchNearbyLocations(userLocation.lat, userLocation.lng);
           }
@@ -132,7 +121,6 @@ const MapScreen: React.FC = () => {
     };
   }, [userLocation, fetchNearbyLocations]);
 
-  // Update search results when query changes
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setSearchResults([]);
@@ -171,7 +159,6 @@ const MapScreen: React.FC = () => {
       mapOptions
     );
 
-    // Add user marker
     new google.maps.Marker({
       position: center,
       map: mapRef.current,
@@ -187,15 +174,12 @@ const MapScreen: React.FC = () => {
     });
   };
 
-  // Update map markers when locations change
   const updateMapMarkers = useCallback((locations: ParkingLocation[]) => {
     if (!mapRef.current) return;
     
-    // Clear existing markers
     markersRef.current.forEach(marker => marker.setMap(null));
     markersRef.current = [];
     
-    // Add new markers
     locations.forEach(location => {
       const marker = new google.maps.Marker({
         position: { lat: location.lat, lng: location.lng },
@@ -216,9 +200,8 @@ const MapScreen: React.FC = () => {
     });
   }, [selectedLocationId]);
 
-  // Haversine formula to calculate distance between two coordinates
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the earth in km
+    const R = 6371;
     const dLat = deg2rad(lat2 - lat1);
     const dLon = deg2rad(lon2 - lon1);
     const a = 
@@ -226,7 +209,7 @@ const MapScreen: React.FC = () => {
       Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
       Math.sin(dLon/2) * Math.sin(dLon/2); 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    const d = R * c; // Distance in km
+    const d = R * c;
     return d;
   };
 
@@ -237,17 +220,13 @@ const MapScreen: React.FC = () => {
   const handleLocationSelect = (locationId: string) => {
     setSelectedLocationId(locationId);
     
-    // Find the selected location
     const location = localParkingLocations.find(loc => loc.id === locationId);
     
     if (location && mapRef.current) {
-      // Pan to the selected location
       mapRef.current.panTo({ lat: location.lat, lng: location.lng });
       
-      // Update markers to highlight the selected one
       updateMapMarkers(localParkingLocations);
       
-      // Convert to the format expected by ParkingContext
       const formattedLocation = {
         id: location.id,
         name: location.name,
@@ -259,8 +238,8 @@ const MapScreen: React.FC = () => {
         distance: location.distance || "Unknown",
         availableSpots: location.available_spots,
         totalSpots: location.total_spots,
-        pricePerHour: location.price_per_hour,
-        floors: 3  // Assuming all locations have 3 floors for now
+        pricePerHour: location.price_perHour,
+        floors: 3
       };
       
       setSelectedLocation(formattedLocation);
@@ -290,13 +269,11 @@ const MapScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white relative">
-      {/* Header with Navigation */}
       <div className="fixed top-0 left-0 right-0 bg-white z-50 px-4 py-3 flex items-center border-b border-parking-lightgray">
         <NavigationDrawer />
         <h1 className="text-lg font-medium ml-4">Find Parking</h1>
       </div>
       
-      {/* Map Container */}
       <div className="w-full h-screen pt-12 relative">
         {!mapLoaded || isLoading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
@@ -307,7 +284,6 @@ const MapScreen: React.FC = () => {
           <div id="map" className="w-full h-full"></div>
         )}
         
-        {/* Search Bar */}
         <div className="absolute top-16 left-0 right-0 px-4 z-20">
           <div 
             className="bg-white rounded-full shadow-lg flex items-center px-4 py-2 cursor-pointer"
@@ -318,7 +294,6 @@ const MapScreen: React.FC = () => {
           </div>
         </div>
         
-        {/* Search Dropdown */}
         {isSearchOpen && (
           <div className="absolute top-28 left-0 right-0 px-4 z-30">
             <div className="bg-white rounded-lg shadow-lg">
@@ -368,10 +343,8 @@ const MapScreen: React.FC = () => {
           </div>
         )}
         
-        {/* Bottom Overlay */}
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/80 to-transparent h-32 z-10"></div>
         
-        {/* Location Details Card */}
         {selectedLocationId && (
           <div className="absolute bottom-20 left-0 right-0 px-4 z-20 animate-fade-in">
             <div className="bg-white rounded-lg shadow-lg p-4">
@@ -411,7 +384,6 @@ const MapScreen: React.FC = () => {
         )}
       </div>
       
-      {/* Navigation Bar */}
       <NavBar type="bottom" />
     </div>
   );

@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -30,6 +31,7 @@ import PaymentsPage from "@/components/PaymentsPage";
 import NotFound from "./pages/NotFound";
 import BookingsPage from "./pages/BookingsPage";
 import SettingsPage from "./pages/SettingsPage";
+import Index from "./pages/Index";
 
 // Route Protection Component
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -61,7 +63,8 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               {/* Public Routes */}
-              <Route path="/" element={<SplashScreen />} />
+              <Route path="/" element={<Index />} />
+              <Route path="/splash" element={<SplashScreen />} />
               <Route path="/onboarding" element={<OnboardingScreen />} />
               <Route path="/auth" element={<AuthScreen />} />
               <Route path="/login" element={<LoginPage />} />
