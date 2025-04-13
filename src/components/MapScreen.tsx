@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -6,7 +5,7 @@ import NavBar from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
 import NavigationDrawer from '@/components/ui/NavigationDrawer';
 import { useParking } from '@/context/ParkingContext';
-import { Search, MapPin, Navigation, Loader, Compass, Info } from 'lucide-react';
+import { Search, MapPin, Navigation, Loader, Compass } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
 import LocationMarker from '@/components/ui/LocationMarker';
@@ -85,9 +84,16 @@ const MapScreen: React.FC = () => {
     
     console.log('Map loaded, getting user location');
     
-    // Create info window for reuse
-    if (!infoWindowRef.current) {
-      infoWindowRef.current = new google.maps.InfoWindow();
+    // We'll initialize the InfoWindow only after the Google Maps script is loaded
+    // This ensures the google.maps namespace is fully available
+    try {
+      if (window.google?.maps?.InfoWindow) {
+        infoWindowRef.current = new window.google.maps.InfoWindow();
+      } else {
+        console.error('InfoWindow is not available');
+      }
+    } catch (error) {
+      console.error('Error creating InfoWindow:', error);
     }
 
     navigator.geolocation.getCurrentPosition(
@@ -254,15 +260,15 @@ const MapScreen: React.FC = () => {
       });
       
       // Add user location marker click listener
-      userMarkerRef.current.addListener('click', () => {
-        if (infoWindowRef.current && mapRef.current) {
-          infoWindowRef.current.setContent('<div class="p-2"><strong>Your Location</strong></div>');
-          infoWindowRef.current.open({
+      if (userMarkerRef.current && infoWindowRef.current && mapRef.current) {
+        userMarkerRef.current.addListener('click', () => {
+          infoWindowRef.current?.setContent('<div class="p-2"><strong>Your Location</strong></div>');
+          infoWindowRef.current?.open({
             map: mapRef.current,
             anchor: userMarkerRef.current
           });
-        }
-      });
+        });
+      }
       
     } catch (error) {
       console.error('Error initializing map:', error);
@@ -301,7 +307,7 @@ const MapScreen: React.FC = () => {
         marker.addListener('click', () => {
           handleLocationSelect(location.id);
           
-          // Show info window
+          // Show info window only if it's available
           if (infoWindowRef.current && mapRef.current) {
             const contentString = `
               <div class="p-3">

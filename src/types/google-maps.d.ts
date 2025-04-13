@@ -1,4 +1,3 @@
-
 declare namespace google {
   namespace maps {
     class Map {
@@ -25,6 +24,9 @@ declare namespace google {
       open(options: InfoWindowOpenOptions | null): void;
       close(): void;
       setContent(content: string | Node): void;
+      getContent(): string | Node | null;
+      getPosition(): LatLng | null;
+      setPosition(position: LatLng | LatLngLiteral): void;
     }
 
     interface InfoWindowOptions {
@@ -139,7 +141,6 @@ declare namespace google {
       BACKWARD_OPEN_ARROW = 4
     }
 
-    // Adding Geocoder functionality
     class Geocoder {
       constructor();
       geocode(request: GeocoderRequest, callback: (results: GeocoderResult[], status: GeocoderStatus) => void): void;
@@ -196,7 +197,6 @@ declare namespace google {
       ZERO_RESULTS = 'ZERO_RESULTS'
     }
 
-    // Add Places AutocompleteService
     class places {
       static AutocompleteService: {
         new(): AutocompleteService;
