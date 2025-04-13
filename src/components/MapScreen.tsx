@@ -6,9 +6,10 @@ import NavBar from '@/components/ui/NavBar';
 import { Button } from '@/components/ui/Button';
 import NavigationDrawer from '@/components/ui/NavigationDrawer';
 import { useParking } from '@/context/ParkingContext';
-import { Search, MapPin, Navigation, Loader } from 'lucide-react';
+import { Search, MapPin, Navigation, Loader, Compass, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
+import LocationMarker from '@/components/ui/LocationMarker';
 
 interface ParkingLocation {
   id: string;
@@ -38,7 +39,10 @@ const MapScreen: React.FC = () => {
   const [mapLoaded, setMapLoaded] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
+  const userMarkerRef = useRef<google.maps.Marker | null>(null);
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   
+  // Load Google Maps script
   useEffect(() => {
     const loadGoogleMapsScript = () => {
       if (window.google?.maps) {
@@ -50,15 +54,41 @@ const MapScreen: React.FC = () => {
       script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
       script.async = true;
       script.defer = true;
-      script.onload = () => setMapLoaded(true);
+      
+      script.onload = () => {
+        console.log('Google Maps script loaded');
+        setMapLoaded(true);
+      };
+      
+      script.onerror = (error) => {
+        console.error('Error loading Google Maps script:', error);
+        toast.error('Failed to load map. Please try again later.');
+      };
+      
       document.head.appendChild(script);
     };
 
     loadGoogleMapsScript();
+    
+    // Cleanup
+    return () => {
+      // Remove event listeners if needed
+      markersRef.current.forEach(marker => {
+        // Google maps handles cleanup of listeners when markers are removed
+      });
+    };
   }, []);
 
+  // Initialize map with user location
   useEffect(() => {
     if (!mapLoaded) return;
+    
+    console.log('Map loaded, getting user location');
+    
+    // Create info window for reuse
+    if (!infoWindowRef.current) {
+      infoWindowRef.current = new google.maps.InfoWindow();
+    }
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
@@ -66,22 +96,34 @@ const MapScreen: React.FC = () => {
           lat: position.coords.latitude,
           lng: position.coords.longitude
         };
+        console.log('User position obtained:', userPos);
         setUserLocation(userPos);
         initializeMap(userPos);
         fetchNearbyLocations(userPos.lat, userPos.lng);
       },
       (error) => {
         console.error('Error getting location:', error);
+        toast.error('Could not get your location. Using default.');
+        
+        // Default to Mumbai, India if location access is denied
         const defaultPos = { lat: 19.076, lng: 72.877 };
         setUserLocation(defaultPos);
         initializeMap(defaultPos);
         fetchNearbyLocations(defaultPos.lat, defaultPos.lng);
+      },
+      { 
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
       }
     );
   }, [mapLoaded, fetchNearbyLocations]);
 
+  // Update local parking locations when data changes
   useEffect(() => {
     if (parkingLocations.length > 0) {
+      console.log('Parking locations updated:', parkingLocations);
+      
       const mappedLocations = parkingLocations.map(loc => ({
         id: loc.id,
         name: loc.name,
@@ -103,6 +145,7 @@ const MapScreen: React.FC = () => {
     }
   }, [parkingLocations]);
 
+  // Listen for real-time updates on parking locations
   useEffect(() => {
     const channel = supabase
       .channel('public:parking_locations')
@@ -117,11 +160,14 @@ const MapScreen: React.FC = () => {
       )
       .subscribe();
 
+    console.log('Supabase realtime channel subscribed');
+    
     return () => {
       supabase.removeChannel(channel);
     };
   }, [userLocation, fetchNearbyLocations]);
 
+  // Filter search results based on query
   useEffect(() => {
     if (searchQuery.trim() === '') {
       setSearchResults([]);
@@ -134,70 +180,154 @@ const MapScreen: React.FC = () => {
       location.address.toLowerCase().includes(query)
     );
     
+    console.log('Search results:', filtered);
     setSearchResults(filtered);
   }, [searchQuery, localParkingLocations]);
 
+  // Initialize map with center point
   const initializeMap = (center: { lat: number, lng: number }) => {
-    if (!mapLoaded || !document.getElementById('map')) return;
+    if (!mapLoaded || !document.getElementById('map')) {
+      console.error('Map cannot be initialized: map not loaded or element not found');
+      return;
+    }
+
+    console.log('Initializing map with center:', center);
 
     const mapOptions: google.maps.MapOptions = {
       center,
       zoom: 14,
-      disableDefaultUI: true,
+      disableDefaultUI: false,
       zoomControl: true,
       fullscreenControl: true,
+      mapTypeControl: false,
+      streetViewControl: false,
+      rotateControl: false,
+      scrollwheel: true,
+      gestureHandling: 'greedy',
       styles: [
         {
           featureType: 'poi',
           elementType: 'labels',
           stylers: [{ visibility: 'off' }]
+        },
+        {
+          featureType: 'transit',
+          elementType: 'labels.icon',
+          stylers: [{ visibility: 'off' }]
         }
       ]
     };
 
-    mapRef.current = new google.maps.Map(
-      document.getElementById('map') as HTMLElement, 
-      mapOptions
-    );
-
-    new google.maps.Marker({
-      position: center,
-      map: mapRef.current,
-      icon: {
-        path: google.maps.SymbolPath.CIRCLE,
-        scale: 7,
-        fillColor: '#4285F4',
-        fillOpacity: 1,
-        strokeColor: '#ffffff',
-        strokeWeight: 2,
-      },
-      title: 'Your Location'
-    });
-  };
-
-  const updateMapMarkers = useCallback((locations: ParkingLocation[]) => {
-    if (!mapRef.current) return;
-    
-    markersRef.current.forEach(marker => marker.setMap(null));
-    markersRef.current = [];
-    
-    locations.forEach(location => {
-      const marker = new google.maps.Marker({
-        position: { lat: location.lat, lng: location.lng },
+    try {
+      mapRef.current = new google.maps.Map(
+        document.getElementById('map') as HTMLElement, 
+        mapOptions
+      );
+      
+      console.log('Map initialized');
+      
+      // Add user marker
+      if (userMarkerRef.current) {
+        userMarkerRef.current.setMap(null);
+      }
+      
+      userMarkerRef.current = new google.maps.Marker({
+        position: center,
         map: mapRef.current,
-        title: location.name,
         icon: {
-          url: selectedLocationId === location.id 
-            ? 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-            : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+          path: google.maps.SymbolPath.CIRCLE,
+          scale: 7,
+          fillColor: '#4285F4',
+          fillOpacity: 1,
+          strokeColor: '#ffffff',
+          strokeWeight: 2,
+        },
+        title: 'Your Location'
+      });
+      
+      // Add click listener to map
+      mapRef.current.addListener('click', () => {
+        // Close info windows when clicking on the map
+        if (infoWindowRef.current) {
+          infoWindowRef.current.close();
         }
       });
       
-      marker.addListener('click', () => {
-        handleLocationSelect(location.id);
+      // Add user location marker click listener
+      userMarkerRef.current.addListener('click', () => {
+        if (infoWindowRef.current && mapRef.current) {
+          infoWindowRef.current.setContent('<div class="p-2"><strong>Your Location</strong></div>');
+          infoWindowRef.current.open({
+            map: mapRef.current,
+            anchor: userMarkerRef.current
+          });
+        }
       });
       
-      markersRef.current.push(marker);
+    } catch (error) {
+      console.error('Error initializing map:', error);
+      toast.error('Failed to initialize map. Please refresh the page.');
+    }
+  };
+
+  // Update markers on the map
+  const updateMapMarkers = useCallback((locations: ParkingLocation[]) => {
+    if (!mapRef.current) {
+      console.error('Map not initialized');
+      return;
+    }
+    
+    console.log('Updating map markers');
+    
+    // Clear existing markers
+    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current = [];
+    
+    // Add new markers
+    locations.forEach(location => {
+      try {
+        const marker = new google.maps.Marker({
+          position: { lat: location.lat, lng: location.lng },
+          map: mapRef.current,
+          title: location.name,
+          icon: {
+            url: selectedLocationId === location.id 
+              ? 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+              : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+          }
+        });
+        
+        // Add click listener to marker
+        marker.addListener('click', () => {
+          handleLocationSelect(location.id);
+          
+          // Show info window
+          if (infoWindowRef.current && mapRef.current) {
+            const contentString = `
+              <div class="p-3">
+                <div class="font-bold">${location.name}</div>
+                <div class="text-sm">${location.address}</div>
+                <div class="mt-1 text-sm">
+                  <span class="${location.available_spots > 0 ? 'text-green-600' : 'text-red-600'}">
+                    ${location.available_spots} spots available
+                  </span>
+                </div>
+                <div class="mt-1 text-sm">₹${location.price_per_hour}/hour</div>
+              </div>
+            `;
+            
+            infoWindowRef.current.setContent(contentString);
+            infoWindowRef.current.open({
+              map: mapRef.current,
+              anchor: marker
+            });
+          }
+        });
+        
+        markersRef.current.push(marker);
+      } catch (error) {
+        console.error('Error creating marker:', error);
+      }
     });
   }, [selectedLocationId]);
 
@@ -224,10 +354,15 @@ const MapScreen: React.FC = () => {
     const location = localParkingLocations.find(loc => loc.id === locationId);
     
     if (location && mapRef.current) {
+      console.log('Selected location:', location);
+      
+      // Animate map pan to the selected location
       mapRef.current.panTo({ lat: location.lat, lng: location.lng });
       
+      // Update markers to highlight the selected one
       updateMapMarkers(localParkingLocations);
       
+      // Create formatted location object for the ParkingContext
       const formattedLocation = {
         id: location.id,
         name: location.name,
@@ -239,7 +374,7 @@ const MapScreen: React.FC = () => {
         distance: location.distance || "Unknown",
         availableSpots: location.available_spots,
         totalSpots: location.total_spots,
-        pricePerHour: location.price_per_hour, // Fixed: Changed from price_perHour to price_per_hour
+        pricePerHour: location.price_per_hour,
         floors: 3
       };
       
@@ -250,6 +385,8 @@ const MapScreen: React.FC = () => {
   const handleViewDetails = () => {
     if (selectedLocationId) {
       navigate('/parking-details');
+    } else {
+      toast.error('Please select a parking location first');
     }
   };
 
@@ -266,6 +403,16 @@ const MapScreen: React.FC = () => {
     handleLocationSelect(locationId);
     setIsSearchOpen(false);
     setSearchQuery('');
+  };
+
+  const handleCenterOnUser = () => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.panTo(userLocation);
+      mapRef.current.setZoom(15);
+      toast.success('Centered on your location');
+    } else {
+      toast.error('Unable to determine your location');
+    }
   };
 
   return (
@@ -285,6 +432,7 @@ const MapScreen: React.FC = () => {
           <div id="map" className="w-full h-full"></div>
         )}
         
+        {/* Search Input */}
         <div className="absolute top-16 left-0 right-0 px-4 z-20">
           <div 
             className="bg-white rounded-full shadow-lg flex items-center px-4 py-2 cursor-pointer"
@@ -295,6 +443,19 @@ const MapScreen: React.FC = () => {
           </div>
         </div>
         
+        {/* Map Controls */}
+        <div className="absolute top-28 right-4 z-20 flex flex-col gap-2">
+          <Button
+            variant="secondary"
+            size="icon"
+            className="rounded-full bg-white shadow-md"
+            onClick={handleCenterOnUser}
+          >
+            <Compass size={20} className="text-parking-dark" />
+          </Button>
+        </div>
+        
+        {/* Search Results */}
         {isSearchOpen && (
           <div className="absolute top-28 left-0 right-0 px-4 z-30">
             <div className="bg-white rounded-lg shadow-lg">
@@ -346,6 +507,7 @@ const MapScreen: React.FC = () => {
         
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/80 to-transparent h-32 z-10"></div>
         
+        {/* Selected Location Card */}
         {selectedLocationId && (
           <div className="absolute bottom-20 left-0 right-0 px-4 z-20 animate-fade-in">
             <div className="bg-white rounded-lg shadow-lg p-4">
@@ -372,14 +534,31 @@ const MapScreen: React.FC = () => {
                   <p className="text-xs font-medium text-parking-dark">₹{localParkingLocations.find(loc => loc.id === selectedLocationId)?.price_per_hour}/hr</p>
                 </div>
               </div>
-              <Button
-                variant="primary"
-                fullWidth
-                className="mt-4"
-                onClick={handleViewDetails}
-              >
-                View Details
-              </Button>
+              <div className="flex gap-2 mt-4">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    if (userLocation && mapRef.current) {
+                      const location = localParkingLocations.find(loc => loc.id === selectedLocationId);
+                      if (location) {
+                        // Open in Google Maps for navigation
+                        window.open(`https://www.google.com/maps/dir/?api=1&origin=${userLocation.lat},${userLocation.lng}&destination=${location.lat},${location.lng}&travelmode=driving`, '_blank');
+                      }
+                    }
+                  }}
+                >
+                  <Navigation size={16} className="mr-2" />
+                  Navigate
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1"
+                  onClick={handleViewDetails}
+                >
+                  View Details
+                </Button>
+              </div>
             </div>
           </div>
         )}
