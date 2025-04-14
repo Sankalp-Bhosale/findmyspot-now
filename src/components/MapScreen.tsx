@@ -2,8 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import NavBar from '@/components/ui/NavBar';
-import NavigationDrawer from '@/components/ui/NavigationDrawer';
+import { Menu, Search, MapPin, Navigation2, MoreVertical } from 'lucide-react';
 import { useParking } from '@/context/ParkingContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -32,6 +31,7 @@ const MapScreen: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [localParkingLocations, setLocalParkingLocations] = useState<ParkingLocation[]>([]);
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Initialize Google Maps with useGoogleMaps hook
   const { 
@@ -161,33 +161,135 @@ const MapScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white relative">
-      <div className="fixed top-0 left-0 right-0 bg-white z-50 px-4 py-3 flex items-center border-b border-parking-lightgray">
-        <NavigationDrawer />
-        <h1 className="text-lg font-medium ml-4">Find Parking</h1>
+      <div className="fixed top-0 left-0 right-0 bg-yellow-400 z-50 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center">
+          <button 
+            onClick={() => setIsDrawerOpen(true)}
+            className="p-2"
+          >
+            <Menu size={24} color="#000" />
+          </button>
+          <h1 className="text-xl font-bold ml-4 uppercase">Park My Car</h1>
+        </div>
+        <button className="p-2">
+          <MoreVertical size={24} color="#000" />
+        </button>
       </div>
       
-      <div className="w-full h-screen pt-12 relative">
+      <div className="w-full h-screen pt-14 relative">
         <GoogleMap isLoading={isLoading} mapLoaded={mapLoaded}>
-          <MapSearchBar 
-            locations={localParkingLocations} 
-            onLocationSelect={handleLocationSelect} 
-          />
+          <div className="absolute top-4 left-0 right-0 px-4 z-20">
+            <div className="bg-white rounded-md shadow-lg flex items-center px-4 py-2">
+              <Search size={20} className="text-gray-400 mr-2" />
+              <input 
+                type="text" 
+                placeholder="State, City or Zip code" 
+                className="w-full outline-none text-sm py-1"
+              />
+            </div>
+          </div>
           
-          <MapControls onCenterUser={handleCenterOnUser} />
-          
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white/80 to-transparent h-32 z-10"></div>
+          <div className="absolute bottom-20 right-4 z-20">
+            <button 
+              onClick={handleCenterOnUser}
+              className="bg-white p-3 rounded-full shadow-lg"
+            >
+              <Navigation2 size={24} />
+            </button>
+          </div>
           
           {selectedLocation && (
-            <LocationCard 
-              location={selectedLocation}
-              userLocation={userLocation}
-              onViewDetails={handleViewDetails}
-            />
+            <div className="absolute bottom-4 left-4 right-4 z-20">
+              <div className="bg-white rounded-lg shadow-lg p-4">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-bold">{selectedLocation.name}</h3>
+                    <p className="text-sm text-gray-500">{selectedLocation.address}</p>
+                    <div className="mt-1">
+                      <span className={`text-sm ${selectedLocation.available_spots > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {selectedLocation.available_spots} spots available
+                      </span>
+                    </div>
+                    <p className="text-sm mt-1">₹{selectedLocation.price_per_hour}/hour</p>
+                  </div>
+                  <button 
+                    onClick={handleViewDetails}
+                    className="bg-yellow-400 px-4 py-2 rounded-md text-sm font-medium"
+                  >
+                    Book
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </GoogleMap>
       </div>
       
-      <NavBar type="bottom" />
+      {/* Drawer Menu */}
+      {isDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setIsDrawerOpen(false)}>
+          <div 
+            className="absolute top-0 left-0 h-full w-64 bg-white shadow-lg transform transition-transform"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 bg-yellow-400">
+              <h2 className="text-xl font-bold">Menu</h2>
+            </div>
+            <div className="p-4">
+              <ul className="space-y-4">
+                <li>
+                  <button 
+                    onClick={() => {
+                      navigate('/home');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="flex items-center space-x-2"
+                  >
+                    <MapPin size={20} />
+                    <span>Find Parking</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      navigate('/reservations');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="flex items-center space-x-2"
+                  >
+                    <MapPin size={20} />
+                    <span>My Reservations</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      navigate('/profile');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="flex items-center space-x-2"
+                  >
+                    <MapPin size={20} />
+                    <span>My Profile</span>
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    onClick={() => {
+                      navigate('/settings');
+                      setIsDrawerOpen(false);
+                    }}
+                    className="flex items-center space-x-2"
+                  >
+                    <MapPin size={20} />
+                    <span>Settings</span>
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

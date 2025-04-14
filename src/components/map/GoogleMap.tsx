@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Loader } from 'lucide-react';
 
 interface GoogleMapProps {
@@ -13,7 +13,7 @@ const GoogleMap: React.FC<GoogleMapProps> = ({ isLoading, mapLoaded, children })
     <div className="w-full h-full relative">
       {!mapLoaded || isLoading ? (
         <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <Loader className="animate-spin h-8 w-8 text-parking-yellow" />
+          <Loader className="animate-spin h-8 w-8 text-yellow-400" />
           <span className="ml-2">Loading map...</span>
         </div>
       ) : (

@@ -131,9 +131,9 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
       const mapOptions: any = {
         center,
         zoom: 14,
-        disableDefaultUI: false,
-        zoomControl: true,
-        fullscreenControl: true,
+        disableDefaultUI: true, // Disable default UI for cleaner look
+        zoomControl: false,
+        fullscreenControl: false,
         mapTypeControl: false,
         streetViewControl: false,
         rotateControl: false,
@@ -141,14 +141,34 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         gestureHandling: 'greedy',
         styles: [
           {
-            featureType: 'poi',
-            elementType: 'labels',
-            stylers: [{ visibility: 'off' }]
+            featureType: "all",
+            elementType: "labels.text.fill",
+            stylers: [{ color: "#333333" }]
           },
           {
-            featureType: 'transit',
-            elementType: 'labels.icon',
-            stylers: [{ visibility: 'off' }]
+            featureType: "landscape",
+            elementType: "all",
+            stylers: [{ color: "#f2f2f2" }]
+          },
+          {
+            featureType: "poi",
+            elementType: "all",
+            stylers: [{ visibility: "off" }]
+          },
+          {
+            featureType: "road",
+            elementType: "all",
+            stylers: [{ saturation: -100 }, { lightness: 45 }]
+          },
+          {
+            featureType: "transit",
+            elementType: "all",
+            stylers: [{ visibility: "simplified" }]
+          },
+          {
+            featureType: "water",
+            elementType: "all",
+            stylers: [{ color: "#b2e1ff" }, { visibility: "on" }]
           }
         ]
       };
@@ -169,11 +189,11 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         map: mapRef.current,
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 7,
-          fillColor: '#4285F4',
+          scale: 10,
+          fillColor: '#FFCD00', // Yellow color for user marker
           fillOpacity: 1,
-          strokeColor: '#ffffff',
-          strokeWeight: 2,
+          strokeColor: '#000000',
+          strokeWeight: 1,
         },
         title: 'Your Location'
       });
@@ -241,7 +261,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
           icon: {
             url: selectedLocationId === location.id 
               ? 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-              : 'https://maps.google.com/mapfiles/ms/icons/red-dot.png'
+              : 'https://maps.google.com/mapfiles/ms/icons/green-dot.png'
           }
         });
         
