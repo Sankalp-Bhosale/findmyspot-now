@@ -10,6 +10,8 @@ interface ParkingLocation {
   distance?: string;
   available_spots: number;
   price_per_hour: number;
+  lat: number;
+  lng: number;
 }
 
 interface LocationCardProps {
