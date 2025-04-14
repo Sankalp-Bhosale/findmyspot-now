@@ -14,7 +14,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Use explicit type annotations with window.google
+  // Use window.google to avoid TypeScript namespace errors
   const mapRef = useRef<google.maps.Map | null>(null);
   const userMarkerRef = useRef<google.maps.Marker | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
