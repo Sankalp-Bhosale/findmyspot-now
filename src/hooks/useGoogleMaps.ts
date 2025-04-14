@@ -1,6 +1,8 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
+// Define Google Maps API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBJHvvAp9JbmJz1upsIrh9AyWxY5NnEOJ8';
 
 interface UseGoogleMapsProps {
@@ -12,6 +14,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   
+  // Use explicit type annotations with window.google
   const mapRef = useRef<google.maps.Map | null>(null);
   const userMarkerRef = useRef<google.maps.Marker | null>(null);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
@@ -124,6 +127,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     console.log('Initializing map with center:', center);
 
     try {
+      // Use window.google to make sure TypeScript knows it's globally available
       const mapOptions: google.maps.MapOptions = {
         center,
         zoom: 14,
