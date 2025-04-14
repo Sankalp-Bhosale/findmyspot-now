@@ -1,3 +1,11 @@
+
+declare global {
+  interface Window {
+    google: typeof google;
+    initGoogleMaps?: () => void;
+  }
+}
+
 declare namespace google {
   namespace maps {
     class Map {
@@ -258,3 +266,5 @@ declare namespace google {
     }
   }
 }
+
+export {};

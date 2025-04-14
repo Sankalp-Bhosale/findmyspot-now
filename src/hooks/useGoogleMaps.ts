@@ -21,20 +21,43 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
   // Load Google Maps script
   useEffect(() => {
     const loadGoogleMapsScript = () => {
+      // Check if Google Maps is already loaded
       if (window.google?.maps) {
         console.log('Google Maps already loaded');
         setMapLoaded(true);
+        
+        // Initialize InfoWindow after confirming Maps is loaded
+        if (!infoWindowRef.current && window.google.maps.InfoWindow) {
+          try {
+            infoWindowRef.current = new window.google.maps.InfoWindow();
+            console.log('InfoWindow initialized successfully');
+          } catch (error) {
+            console.error('Error creating InfoWindow:', error);
+          }
+        }
         return;
       }
 
+      // If not loaded, create and load the script
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&loading=async`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGoogleMaps`;
       script.async = true;
       script.defer = true;
       
-      script.onload = () => {
-        console.log('Google Maps script loaded');
+      // Create a global callback that will be called when the script loads
+      window.initGoogleMaps = () => {
+        console.log('Google Maps script loaded via callback');
         setMapLoaded(true);
+        
+        // Initialize InfoWindow after Maps is loaded via callback
+        if (!infoWindowRef.current) {
+          try {
+            infoWindowRef.current = new window.google.maps.InfoWindow();
+            console.log('InfoWindow initialized successfully via callback');
+          } catch (error) {
+            console.error('Error creating InfoWindow via callback:', error);
+          }
+        }
       };
       
       script.onerror = (error) => {
@@ -49,6 +72,12 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     
     // Cleanup
     return () => {
+      // Remove the global callback when component unmounts
+      if (window.initGoogleMaps) {
+        // @ts-ignore
+        window.initGoogleMaps = undefined;
+      }
+      
       // Remove event listeners if needed
       markersRef.current.forEach(marker => {
         // Google maps handles cleanup of listeners when markers are removed
@@ -62,17 +91,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     
     console.log('Map loaded, getting user location');
     
-    // Initialize the InfoWindow after the Google Maps script is loaded
-    try {
-      if (window.google?.maps?.InfoWindow) {
-        infoWindowRef.current = new window.google.maps.InfoWindow();
-      } else {
-        console.error('InfoWindow is not available');
-      }
-    } catch (error) {
-      console.error('Error creating InfoWindow:', error);
-    }
-
+    // Get user's geolocation
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const userPos = {
@@ -119,33 +138,33 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
 
     console.log('Initializing map with center:', center);
 
-    const mapOptions: google.maps.MapOptions = {
-      center,
-      zoom: 14,
-      disableDefaultUI: false,
-      zoomControl: true,
-      fullscreenControl: true,
-      mapTypeControl: false,
-      streetViewControl: false,
-      rotateControl: false,
-      scrollwheel: true,
-      gestureHandling: 'greedy',
-      styles: [
-        {
-          featureType: 'poi',
-          elementType: 'labels',
-          stylers: [{ visibility: 'off' }]
-        },
-        {
-          featureType: 'transit',
-          elementType: 'labels.icon',
-          stylers: [{ visibility: 'off' }]
-        }
-      ]
-    };
-
     try {
-      mapRef.current = new google.maps.Map(
+      const mapOptions: google.maps.MapOptions = {
+        center,
+        zoom: 14,
+        disableDefaultUI: false,
+        zoomControl: true,
+        fullscreenControl: true,
+        mapTypeControl: false,
+        streetViewControl: false,
+        rotateControl: false,
+        scrollwheel: true,
+        gestureHandling: 'greedy',
+        styles: [
+          {
+            featureType: 'poi',
+            elementType: 'labels',
+            stylers: [{ visibility: 'off' }]
+          },
+          {
+            featureType: 'transit',
+            elementType: 'labels.icon',
+            stylers: [{ visibility: 'off' }]
+          }
+        ]
+      };
+
+      mapRef.current = new window.google.maps.Map(
         document.getElementById('map') as HTMLElement, 
         mapOptions
       );
@@ -157,11 +176,11 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         userMarkerRef.current.setMap(null);
       }
       
-      userMarkerRef.current = new google.maps.Marker({
+      userMarkerRef.current = new window.google.maps.Marker({
         position: center,
         map: mapRef.current,
         icon: {
-          path: google.maps.SymbolPath.CIRCLE,
+          path: window.google.maps.SymbolPath.CIRCLE,
           scale: 7,
           fillColor: '#4285F4',
           fillOpacity: 1,
@@ -170,6 +189,16 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         },
         title: 'Your Location'
       });
+      
+      // Always create a new InfoWindow after map initialization if it doesn't exist
+      if (!infoWindowRef.current) {
+        try {
+          infoWindowRef.current = new window.google.maps.InfoWindow();
+          console.log('InfoWindow created during map initialization');
+        } catch (error) {
+          console.error('Failed to create InfoWindow during map initialization:', error);
+        }
+      }
       
       // Add click listener to map
       mapRef.current.addListener('click', () => {
@@ -210,8 +239,8 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     available_spots: number;
     distance?: string;
   }>, selectedLocationId: string | null, onLocationSelect: (id: string) => void) => {
-    if (!mapRef.current) {
-      console.error('Map not initialized');
+    if (!mapRef.current || !window.google?.maps) {
+      console.error('Map not initialized or Google Maps not loaded');
       return;
     }
     
@@ -224,7 +253,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     // Add new markers
     locations.forEach(location => {
       try {
-        const marker = new google.maps.Marker({
+        const marker = new window.google.maps.Marker({
           position: { lat: location.lat, lng: location.lng },
           map: mapRef.current,
           title: location.name,
@@ -239,7 +268,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         marker.addListener('click', () => {
           onLocationSelect(location.id);
           
-          // Show info window only if it's available
+          // Show info window only if it's available and map is initialized
           if (infoWindowRef.current && mapRef.current) {
             const contentString = `
               <div class="p-3">
@@ -259,6 +288,8 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
               map: mapRef.current,
               anchor: marker
             });
+          } else {
+            console.warn('InfoWindow or map not available for marker click');
           }
         });
         
@@ -287,3 +318,4 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     centerMapOnLocation
   };
 }
+
