@@ -42,6 +42,7 @@ const MapScreen: React.FC = () => {
     centerMapOnLocation 
   } = useGoogleMaps({
     onUserLocationFound: (location) => {
+      console.log('User location found, fetching nearby locations');
       fetchNearbyLocations(location.lat, location.lng);
     }
   });
@@ -94,7 +95,9 @@ const MapScreen: React.FC = () => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Supabase realtime subscription status:', status);
+      });
 
     console.log('Supabase realtime channel subscribed');
     

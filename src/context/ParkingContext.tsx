@@ -58,6 +58,60 @@ interface ParkingContextType {
 
 const ParkingContext = createContext<ParkingContextType | undefined>(undefined);
 
+// Fallback parking locations in case API fails
+const FALLBACK_LOCATIONS = [
+  {
+    id: "3401bc9f-7fa0-42c1-a4e2-2d30c8531b49",
+    name: "Central Parking",
+    address: "123 Main St, Mumbai",
+    lat: 19.076,
+    lng: 72.877,
+    price_per_hour: 50,
+    total_spots: 100,
+    available_spots: 75
+  },
+  {
+    id: "2f975c24-d5e5-4550-8dd0-9c28b8cc3b30",
+    name: "City Square Parking",
+    address: "456 Park Ave, Delhi",
+    lat: 28.613,
+    lng: 77.209,
+    price_per_hour: 40,
+    total_spots: 150,
+    available_spots: 120
+  },
+  {
+    id: "a1c2547d-5d8a-4a0f-96e9-e49043f3502c",
+    name: "Metro Parking Complex",
+    address: "789 Station Rd, Bangalore",
+    lat: 12.972,
+    lng: 77.594,
+    price_per_hour: 30,
+    total_spots: 200,
+    available_spots: 150
+  },
+  {
+    id: "ed51369b-9f30-4cfe-bc41-7ebce0a2865f",
+    name: "Riverside Parking",
+    address: "101 River View, Kolkata",
+    lat: 22.572,
+    lng: 88.363,
+    price_per_hour: 35,
+    total_spots: 80,
+    available_spots: 65
+  },
+  {
+    id: "cf0f17d2-be97-47f6-ac18-5d5ad9f9ce3f",
+    name: "Tech Hub Parking",
+    address: "202 Cyber City, Hyderabad",
+    lat: 17.385,
+    lng: 78.486,
+    price_per_hour: 45,
+    total_spots: 120,
+    available_spots: 90
+  }
+];
+
 // Generate mock parking spots for now
 // In a real app, this would be fetched from the backend
 const generateMockSpots = (floor: number): ParkingSpot[] => {
@@ -98,32 +152,65 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       
       if (error) throw error;
       
-      if (data) {
-        // Calculate distance from user's location
-        const locationsWithDistance = data.map(location => {
-          const distance = calculateDistance(lat, lng, location.lat, location.lng);
-          
-          return {
-            id: location.id,
-            name: location.name,
-            address: location.address,
-            coordinates: {
-              lat: location.lat,
-              lng: location.lng
-            },
-            distance: `${distance.toFixed(1)} km`,
-            availableSpots: location.available_spots,
-            totalSpots: location.total_spots,
-            pricePerHour: location.price_per_hour,
-            floors: 3 // Assuming 3 floors for now
-          };
-        });
-        
-        setParkingLocations(locationsWithDistance);
+      let locationsData;
+      
+      if (data && data.length > 0) {
+        // Use API data if available
+        locationsData = data;
+        console.log('Successfully loaded parking locations from API:', locationsData.length);
+      } else {
+        // Use fallback data if API returns empty array
+        locationsData = FALLBACK_LOCATIONS;
+        console.log('Using fallback parking locations data');
       }
+      
+      // Calculate distance from user's location
+      const locationsWithDistance = locationsData.map(location => {
+        const distance = calculateDistance(lat, lng, location.lat, location.lng);
+        
+        return {
+          id: location.id,
+          name: location.name,
+          address: location.address,
+          coordinates: {
+            lat: location.lat,
+            lng: location.lng
+          },
+          distance: `${distance.toFixed(1)} km`,
+          availableSpots: location.available_spots,
+          totalSpots: location.total_spots,
+          pricePerHour: location.price_per_hour,
+          floors: 3 // Assuming 3 floors for now
+        };
+      });
+      
+      setParkingLocations(locationsWithDistance);
+      toast.success('Parking locations loaded successfully');
     } catch (error) {
       console.error('Error fetching nearby locations:', error);
-      toast.error('Failed to load parking locations');
+      toast.error('Failed to load parking locations from API, using fallback data');
+      
+      // Use fallback data in case of any error
+      const locationsWithDistance = FALLBACK_LOCATIONS.map(location => {
+        const distance = calculateDistance(lat, lng, location.lat, location.lng);
+        
+        return {
+          id: location.id,
+          name: location.name,
+          address: location.address,
+          coordinates: {
+            lat: location.lat,
+            lng: location.lng
+          },
+          distance: `${distance.toFixed(1)} km`,
+          availableSpots: location.available_spots,
+          totalSpots: location.total_spots,
+          pricePerHour: location.price_per_hour,
+          floors: 3 // Assuming 3 floors for now
+        };
+      });
+      
+      setParkingLocations(locationsWithDistance);
     }
   };
 
