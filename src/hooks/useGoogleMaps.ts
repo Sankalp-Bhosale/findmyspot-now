@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
@@ -15,10 +14,10 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
   const [isLoading, setIsLoading] = useState(true);
   
   // Use window.google to avoid TypeScript namespace errors
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const userMarkerRef = useRef<google.maps.Marker | null>(null);
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const mapRef = useRef<any>(null);
+  const userMarkerRef = useRef<any>(null);
+  const infoWindowRef = useRef<any>(null);
+  const markersRef = useRef<any[]>([]);
 
   useEffect(() => {
     const loadGoogleMapsScript = () => {
@@ -128,7 +127,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
 
     try {
       // Use window.google to make sure TypeScript knows it's globally available
-      const mapOptions: google.maps.MapOptions = {
+      const mapOptions: any = {
         center,
         zoom: 14,
         disableDefaultUI: false,
