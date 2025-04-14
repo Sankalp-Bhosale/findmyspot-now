@@ -1,13 +1,8 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
-// We're removing the problematic import and will handle type declarations properly
-// The error happens because it's trying to find a file that doesn't exist or isn't properly exported
-
 const GOOGLE_MAPS_API_KEY = 'AIzaSyBJHvvAp9JbmJz1upsIrh9AyWxY5NnEOJ8';
 
-// Declare the type for the hook props
 interface UseGoogleMapsProps {
   onUserLocationFound?: (location: { lat: number, lng: number }) => void;
 }
