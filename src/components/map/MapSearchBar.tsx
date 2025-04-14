@@ -1,5 +1,5 @@
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Search, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Command, CommandInput, CommandList, CommandEmpty, CommandGroup, CommandItem } from '@/components/ui/command';
@@ -10,6 +10,8 @@ interface ParkingLocation {
   address: string;
   distance?: string;
   available_spots: number;
+  lat: number;
+  lng: number;
 }
 
 interface MapSearchBarProps {
@@ -39,7 +41,7 @@ const MapSearchBar: React.FC<MapSearchBarProps> = ({ locations, onLocationSelect
   };
 
   // Filter search results based on query
-  React.useEffect(() => {
+  useEffect(() => {
     if (searchQuery.trim() === '') {
       setSearchResults([]);
       return;
@@ -54,6 +56,25 @@ const MapSearchBar: React.FC<MapSearchBarProps> = ({ locations, onLocationSelect
     console.log('Search results:', filtered);
     setSearchResults(filtered);
   }, [searchQuery, locations]);
+
+  // Close search when clicking outside
+  useEffect(() => {
+    if (!isSearchOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const element = event.target as HTMLElement;
+      // Skip if clicking on the search input or inside Command component
+      if (element.closest('[cmdk-input]') || element.closest('[cmdk-root]')) {
+        return;
+      }
+      setIsSearchOpen(false);
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSearchOpen]);
 
   return (
     <>
