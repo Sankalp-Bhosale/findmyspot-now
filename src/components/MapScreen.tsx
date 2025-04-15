@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Menu, Search, MapPin, Navigation2, MoreVertical } from 'lucide-react';
+import { Menu, Search, MapPin, Navigation2, MoreVertical, RefreshCcw } from 'lucide-react';
 import { useParking } from '@/context/ParkingContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -39,7 +39,8 @@ const MapScreen: React.FC = () => {
     userLocation, 
     initializeMap, 
     updateMapMarkers, 
-    centerMapOnLocation 
+    centerMapOnLocation,
+    loadError 
   } = useGoogleMaps({
     onUserLocationFound: (location) => {
       console.log('User location found, fetching nearby locations');
@@ -157,6 +158,14 @@ const MapScreen: React.FC = () => {
     }
   };
 
+  const handleRefreshMap = () => {
+    if (userLocation) {
+      setIsLoading(true);
+      fetchNearbyLocations(userLocation.lat, userLocation.lng);
+      toast.success('Refreshing parking locations');
+    }
+  };
+
   // Get the selected location for displaying in the card
   const selectedLocation = selectedLocationId 
     ? localParkingLocations.find(loc => loc.id === selectedLocationId) || null
@@ -180,7 +189,7 @@ const MapScreen: React.FC = () => {
       </div>
       
       <div className="w-full h-screen pt-14 relative">
-        <GoogleMap isLoading={isLoading} mapLoaded={mapLoaded}>
+        <GoogleMap isLoading={isLoading} mapLoaded={mapLoaded} loadError={loadError}>
           <div className="absolute top-4 left-0 right-0 px-4 z-20">
             <div className="bg-white rounded-md shadow-lg flex items-center px-4 py-2">
               <Search size={20} className="text-gray-400 mr-2" />
@@ -192,12 +201,20 @@ const MapScreen: React.FC = () => {
             </div>
           </div>
           
-          <div className="absolute bottom-20 right-4 z-20">
+          <div className="absolute bottom-20 right-4 z-20 flex flex-col space-y-3">
             <button 
               onClick={handleCenterOnUser}
               className="bg-white p-3 rounded-full shadow-lg"
+              aria-label="Center on my location"
             >
               <Navigation2 size={24} />
+            </button>
+            <button 
+              onClick={handleRefreshMap}
+              className="bg-white p-3 rounded-full shadow-lg"
+              aria-label="Refresh parking locations"
+            >
+              <RefreshCcw size={24} />
             </button>
           </div>
           

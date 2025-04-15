@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
@@ -12,15 +13,21 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
   const [mapLoaded, setMapLoaded] = useState(false);
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   
   // Use window.google to avoid TypeScript namespace errors
   const mapRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
   const infoWindowRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const scriptLoadingRef = useRef(false);
 
   useEffect(() => {
     const loadGoogleMapsScript = () => {
+      // If already loading, don't try to load again
+      if (scriptLoadingRef.current) return;
+      
+      // If already loaded, just initialize
       if (window.google?.maps) {
         console.log('Google Maps already loaded');
         setMapLoaded(true);
@@ -36,6 +43,14 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         return;
       }
 
+      // Set loading flag
+      scriptLoadingRef.current = true;
+      
+      // Remove any existing Google Maps scripts to prevent conflicts
+      const existingScripts = document.querySelectorAll('script[src*="maps.googleapis.com"]');
+      existingScripts.forEach(script => script.remove());
+      
+      // Create and append new script
       const script = document.createElement('script');
       script.src = `https://maps.googleapis.com/maps/api/js?key=${GOOGLE_MAPS_API_KEY}&libraries=places&callback=initGoogleMaps`;
       script.async = true;
@@ -43,7 +58,9 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
       
       window.initGoogleMaps = () => {
         console.log('Google Maps script loaded via callback');
+        scriptLoadingRef.current = false;
         setMapLoaded(true);
+        setLoadError(null);
         
         if (!infoWindowRef.current) {
           try {
@@ -57,7 +74,9 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
       
       script.onerror = (error) => {
         console.error('Error loading Google Maps script:', error);
-        toast.error('Failed to load map. Please try again later.');
+        scriptLoadingRef.current = false;
+        setLoadError('Failed to load Google Maps');
+        toast.error('Failed to load map. Please check your internet connection and try again.');
       };
       
       document.head.appendChild(script);
@@ -71,7 +90,9 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
       }
       
       markersRef.current.forEach(marker => {
-        // Google maps handles cleanup of listeners when markers are removed
+        if (marker && marker.setMap) {
+          marker.setMap(null);
+        }
       });
     };
   }, []);
@@ -100,6 +121,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         console.error('Error getting location:', error);
         toast.error('Could not get your location. Using default.');
         
+        // Mumbai coordinates as default
         const defaultPos = { lat: 19.076, lng: 72.877 };
         setUserLocation(defaultPos);
         
@@ -130,8 +152,8 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
       const mapOptions: any = {
         center,
         zoom: 14,
-        disableDefaultUI: true, // Disable default UI for cleaner look
-        zoomControl: false,
+        disableDefaultUI: false, // Enable default UI for better user experience
+        zoomControl: true,
         fullscreenControl: false,
         mapTypeControl: false,
         streetViewControl: false,
@@ -171,6 +193,11 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
           }
         ]
       };
+
+      // Clear any existing map instance
+      if (mapRef.current) {
+        mapRef.current = null;
+      }
 
       mapRef.current = new window.google.maps.Map(
         document.getElementById('map') as HTMLElement, 
@@ -248,7 +275,11 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     
     console.log('Updating map markers');
     
-    markersRef.current.forEach(marker => marker.setMap(null));
+    markersRef.current.forEach(marker => {
+      if (marker && marker.setMap) {
+        marker.setMap(null);
+      }
+    });
     markersRef.current = [];
     
     locations.forEach(location => {
@@ -311,6 +342,7 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     mapRef,
     infoWindowRef,
     markersRef,
+    loadError,
     initializeMap,
     updateMapMarkers,
     centerMapOnLocation
