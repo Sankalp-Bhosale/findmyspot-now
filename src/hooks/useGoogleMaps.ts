@@ -1,8 +1,6 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
-// Define Google Maps API key
 const GOOGLE_MAPS_API_KEY = 'AIzaSyC-tRYeuLcSUFQMp6plLNxyR7jYW1Benw8';
 
 interface UseGoogleMapsProps {
@@ -14,8 +12,8 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [watchId, setWatchId] = useState<number | null>(null);
   
-  // Use window.google to avoid TypeScript namespace errors
   const mapRef = useRef<any>(null);
   const userMarkerRef = useRef<any>(null);
   const infoWindowRef = useRef<any>(null);
@@ -97,46 +95,61 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     };
   }, []);
 
+  // Start watching user's location
   useEffect(() => {
     if (!mapLoaded) return;
     
-    console.log('Map loaded, getting user location');
+    console.log('Starting location tracking');
     
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const userPos = {
-          lat: position.coords.latitude,
-          lng: position.coords.longitude
-        };
-        console.log('User position obtained:', userPos);
-        setUserLocation(userPos);
-        
-        if (onUserLocationFound) {
-          onUserLocationFound(userPos);
-        }
-        
-        setIsLoading(false);
-      },
-      (error) => {
-        console.error('Error getting location:', error);
-        toast.error('Could not get your location. Using default.');
-        
-        // Mumbai coordinates as default
-        const defaultPos = { lat: 19.076, lng: 72.877 };
-        setUserLocation(defaultPos);
-        
-        if (onUserLocationFound) {
-          onUserLocationFound(defaultPos);
-        }
-        
-        setIsLoading(false);
-      },
-      { 
-        enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
+    const startLocationWatch = () => {
+      if (!navigator.geolocation) {
+        toast.error('Geolocation is not supported by your browser');
+        return;
       }
-    );
+
+      const id = navigator.geolocation.watchPosition(
+        (position) => {
+          const userPos = {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          };
+          console.log('Updated user position:', userPos);
+          setUserLocation(userPos);
+          
+          if (onUserLocationFound) {
+            onUserLocationFound(userPos);
+          }
+          
+          // Update user marker position
+          if (userMarkerRef.current && mapRef.current) {
+            userMarkerRef.current.setPosition(userPos);
+            mapRef.current.panTo(userPos);
+          }
+          
+          setIsLoading(false);
+        },
+        (error) => {
+          console.error('Error tracking location:', error);
+          toast.error('Could not track your location');
+          setIsLoading(false);
+        },
+        { 
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0
+        }
+      );
+      
+      setWatchId(id);
+    };
+
+    startLocationWatch();
+    
+    return () => {
+      if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+    };
   }, [mapLoaded, onUserLocationFound]);
 
   const initializeMap = useCallback((center: { lat: number, lng: number }) => {
@@ -148,16 +161,15 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
     console.log('Initializing map with center:', center);
 
     try {
-      // Use window.google to make sure TypeScript knows it's globally available
       const mapOptions: any = {
         center,
-        zoom: 14,
-        disableDefaultUI: false, // Enable default UI for better user experience
+        zoom: 16, // Increased zoom level for better navigation view
+        disableDefaultUI: false,
         zoomControl: true,
         fullscreenControl: false,
-        mapTypeControl: false,
-        streetViewControl: false,
-        rotateControl: false,
+        mapTypeControl: true, // Enable map type control for satellite view
+        streetViewControl: true, // Enable street view for better navigation
+        rotateControl: true,
         scrollwheel: true,
         gestureHandling: 'greedy',
         styles: [
@@ -167,34 +179,23 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
             stylers: [{ color: "#333333" }]
           },
           {
-            featureType: "landscape",
-            elementType: "all",
-            stylers: [{ color: "#f2f2f2" }]
-          },
-          {
-            featureType: "poi",
-            elementType: "all",
-            stylers: [{ visibility: "off" }]
+            featureType: "road",
+            elementType: "geometry",
+            stylers: [{ color: "#ffffff" }]
           },
           {
             featureType: "road",
-            elementType: "all",
-            stylers: [{ saturation: -100 }, { lightness: 45 }]
-          },
-          {
-            featureType: "transit",
-            elementType: "all",
-            stylers: [{ visibility: "simplified" }]
+            elementType: "labels",
+            stylers: [{ visibility: "on" }]
           },
           {
             featureType: "water",
             elementType: "all",
-            stylers: [{ color: "#b2e1ff" }, { visibility: "on" }]
+            stylers: [{ color: "#b2e1ff" }]
           }
         ]
       };
 
-      // Clear any existing map instance
       if (mapRef.current) {
         mapRef.current = null;
       }
@@ -215,44 +216,23 @@ export function useGoogleMaps({ onUserLocationFound }: UseGoogleMapsProps = {}) 
         map: mapRef.current,
         icon: {
           path: window.google.maps.SymbolPath.CIRCLE,
-          scale: 10,
-          fillColor: '#FFCD00', // Yellow color for user marker
+          scale: 8,
+          fillColor: '#4285F4',
           fillOpacity: 1,
-          strokeColor: '#000000',
-          strokeWeight: 1,
+          strokeColor: '#FFFFFF',
+          strokeWeight: 2,
         },
         title: 'Your Location'
       });
       
       if (!infoWindowRef.current) {
-        try {
-          infoWindowRef.current = new window.google.maps.InfoWindow();
-          console.log('InfoWindow created during map initialization');
-        } catch (error) {
-          console.error('Failed to create InfoWindow during map initialization:', error);
-        }
+        infoWindowRef.current = new window.google.maps.InfoWindow();
       }
-      
-      mapRef.current.addListener('click', () => {
-        if (infoWindowRef.current) {
-          infoWindowRef.current.close();
-        }
-      });
-      
-      if (userMarkerRef.current && infoWindowRef.current && mapRef.current) {
-        userMarkerRef.current.addListener('click', () => {
-          infoWindowRef.current?.setContent('<div class="p-2"><strong>Your Location</strong></div>');
-          infoWindowRef.current?.open({
-            map: mapRef.current,
-            anchor: userMarkerRef.current
-          });
-        });
-      }
-      
+
       return mapRef.current;
     } catch (error) {
       console.error('Error initializing map:', error);
-      toast.error('Failed to initialize map. Please refresh the page.');
+      toast.error('Failed to initialize map');
       return null;
     }
   }, [mapLoaded]);

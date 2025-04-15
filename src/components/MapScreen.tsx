@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -40,10 +39,11 @@ const MapScreen: React.FC = () => {
     initializeMap, 
     updateMapMarkers, 
     centerMapOnLocation,
-    loadError 
+    loadError,
+    isLoading 
   } = useGoogleMaps({
     onUserLocationFound: (location) => {
-      console.log('User location found, fetching nearby locations');
+      console.log('User location updated:', location);
       fetchNearbyLocations(location.lat, location.lng);
     }
   });
@@ -149,14 +149,14 @@ const MapScreen: React.FC = () => {
     }
   };
 
-  const handleCenterOnUser = () => {
+  const handleCenterOnUser = useCallback(() => {
     if (userLocation) {
       centerMapOnLocation(userLocation);
       toast.success('Centered on your location');
     } else {
       toast.error('Unable to determine your location');
     }
-  };
+  }, [userLocation, centerMapOnLocation]);
 
   const handleRefreshMap = () => {
     if (userLocation) {
@@ -189,32 +189,30 @@ const MapScreen: React.FC = () => {
       </div>
       
       <div className="w-full h-screen pt-14 relative">
-        <GoogleMap isLoading={isLoading} mapLoaded={mapLoaded} loadError={loadError}>
-          <div className="absolute top-4 left-0 right-0 px-4 z-20">
-            <div className="bg-white rounded-md shadow-lg flex items-center px-4 py-2">
-              <Search size={20} className="text-gray-400 mr-2" />
-              <input 
-                type="text" 
-                placeholder="State, City or Zip code" 
-                className="w-full outline-none text-sm py-1"
-              />
-            </div>
-          </div>
+        <GoogleMap 
+          isLoading={isLoading} 
+          mapLoaded={mapLoaded} 
+          loadError={loadError}
+        >
+          <MapSearchBar 
+            locations={localParkingLocations} 
+            onLocationSelect={handleLocationSelect} 
+          />
           
           <div className="absolute bottom-20 right-4 z-20 flex flex-col space-y-3">
             <button 
               onClick={handleCenterOnUser}
-              className="bg-white p-3 rounded-full shadow-lg"
+              className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
               aria-label="Center on my location"
             >
-              <Navigation2 size={24} />
+              <Navigation2 size={24} className="text-gray-700" />
             </button>
             <button 
               onClick={handleRefreshMap}
-              className="bg-white p-3 rounded-full shadow-lg"
+              className="bg-white p-3 rounded-full shadow-lg hover:bg-gray-50 transition-colors"
               aria-label="Refresh parking locations"
             >
-              <RefreshCcw size={24} />
+              <RefreshCcw size={24} className="text-gray-700" />
             </button>
           </div>
           
@@ -245,7 +243,6 @@ const MapScreen: React.FC = () => {
         </GoogleMap>
       </div>
       
-      {/* Drawer Menu */}
       {isDrawerOpen && (
         <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={() => setIsDrawerOpen(false)}>
           <div 
