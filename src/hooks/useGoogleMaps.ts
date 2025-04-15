@@ -1,9 +1,8 @@
-
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
 // Define Google Maps API key
-const GOOGLE_MAPS_API_KEY = 'AIzaSyBJHvvAp9JbmJz1upsIrh9AyWxY5NnEOJ8';
+const GOOGLE_MAPS_API_KEY = 'AIzaSyC-tRYeuLcSUFQMp6plLNxyR7jYW1Benw8';
 
 interface UseGoogleMapsProps {
   onUserLocationFound?: (location: { lat: number, lng: number }) => void;
