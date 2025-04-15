@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -142,6 +142,9 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [activeBooking, setActiveBooking] = useState<Booking | null>(null);
   const [selectedDuration, setSelectedDuration] = useState<number>(1); // Default to 1 hour
+  
+  // Add a ref to track whether locations were already loaded
+  const locationsLoadedRef = useRef(false);
 
   const fetchNearbyLocations = async (lat: number, lng: number) => {
     try {
@@ -185,10 +188,19 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       });
       
       setParkingLocations(locationsWithDistance);
-      toast.success('Parking locations loaded successfully');
+      
+      // Only show the success toast the first time locations are loaded
+      if (!locationsLoadedRef.current) {
+        toast.success('Parking locations loaded successfully');
+        locationsLoadedRef.current = true;
+      }
     } catch (error) {
       console.error('Error fetching nearby locations:', error);
-      toast.error('Failed to load parking locations from API, using fallback data');
+      
+      // Only show the error toast if locations haven't been loaded yet
+      if (!locationsLoadedRef.current) {
+        toast.error('Failed to load parking locations from API, using fallback data');
+      }
       
       // Use fallback data in case of any error
       const locationsWithDistance = FALLBACK_LOCATIONS.map(location => {
@@ -211,6 +223,9 @@ export function ParkingProvider({ children }: { children: React.ReactNode }) {
       });
       
       setParkingLocations(locationsWithDistance);
+      
+      // Mark as loaded even if we're using fallback data
+      locationsLoadedRef.current = true;
     }
   };
 
